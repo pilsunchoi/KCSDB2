@@ -1,0 +1,20 @@
+# KCSDB2 재구축 환경 의존성
+# Python 3.12 고정 (이전 랩탑 검증 버전과 일치)
+# 재구축·수집·프로브 계층만 포함. 분석 계층(05 이후)은 별도.
+
+# DB 엔진
+duckdb
+
+# 데이터 처리
+pandas
+pyarrow
+
+# 외부 자료 파서
+openpyxl        # 관세청 HS부호 xlsx (03)
+pdfplumber      # HS 연계표 PDF 추출 (03b)
+
+# 수집·프로브
+requests        # 관세청 OpenAPI 호출 (01, 00_probe)
+python-dotenv   # 인증키 로드 (01, 00_probe)
+pyyaml          # settings.yaml (01)
+tqdm            # 진행률 (01, 02a)

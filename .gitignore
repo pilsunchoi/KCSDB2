@@ -1,0 +1,11 @@
+# 데이터·산출물 (로컬 생성, 저장소 제외)
+data/raw/
+data/interim/
+data/processed/
+logs/
+config/api_key.env
+
+# 캐시
+__pycache__/
+*.pyc
+.venv/

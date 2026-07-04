@@ -1,0 +1,49 @@
+# ==========================================
+# 관세청 무역통계 데이터셋 구축 - 설정
+# ==========================================
+# 이 파일은 템플릿입니다. 실제 사용 시:
+#   1. 이 파일을 settings.yaml 로 복사
+#   2. 실제 값 입력
+#   3. settings.yaml은 .gitignore 되어 있음
+# ==========================================
+
+# API 설정
+api:
+  base_url: "http://apis.data.go.kr/1220000/nitemtrade"
+  endpoint: "getNitemtradeList"
+  format: "xml"   # 응답 형식 (현재 XML만 지원으로 보임)
+
+  # 호출 제어
+  timeout_sec: 30
+  retry_max: 3
+  retry_backoff_sec: 5
+  delay_between_calls_sec: 0.3   # 서버 부하 완화
+
+# 수집 범위
+collection:
+  start_year: 2010   # 연 단위 수집 시작
+  end_year: 2026     # 종료 (현재까지)
+
+  # API가 1년 단위 조회만 허용하므로 연도별로 분할 호출
+  chunk_strategy: "yearly"   # yearly | monthly | hs_partition
+
+  # 페이지네이션 (시범 호출 후 확정)
+  page_size: 1000             # 한 호출당 행수 (시범 후 조정)
+  max_pages_per_chunk: 1000   # 안전장치
+
+# 저장 설정
+storage:
+  raw_dir: "data/raw"           # API 원응답 (XML/JSON)
+  interim_dir: "data/interim"   # 중간 처리 (parsed parquet)
+  processed_dir: "data/processed"
+  duckdb_path: "data/processed/trade.duckdb"
+
+  # 압축
+  compress_raw: true            # raw XML을 gzip 압축 저장
+  parquet_compression: "snappy"
+
+# 로깅
+logging:
+  level: "INFO"   # DEBUG | INFO | WARNING | ERROR
+  log_file: "logs/pipeline.log"
+  console_output: true
