@@ -1,0 +1,618 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>관세청 무역통계 DB (KCSDB2)</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1b2430; --muted:#5b6673;
+    --line:#e3e7ec; --brand:#1f6feb; --brand-soft:#eaf1fe;
+    --ok:#137a3f; --ok-soft:#e6f4ec; --warn:#8a5b00; --warn-soft:#fdf3df;
+    --info:#4b4f8a; --info-soft:#ecedf7; --danger:#a11; --code:#0f172a;
+    --radius:12px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",Roboto,sans-serif;
+    line-height:1.6; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:960px; margin:0 auto; padding:0 16px}
+  a{color:var(--brand); text-decoration:none}
+  a:hover{text-decoration:underline}
+  code,kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+
+  /* header */
+  header.top{background:linear-gradient(180deg,#fff, #fbfcfe); border-bottom:1px solid var(--line)}
+  .brand{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;padding:22px 0 6px}
+  .brand h1{font-size:1.95rem;font-weight:700;margin:0;letter-spacing:-.01em}
+  .brand .tag{color:var(--muted);font-size:1.17rem;font-weight:700}
+  .lede{color:var(--muted);margin:0 0 16px;font-size:.98rem}
+
+  /* tabs */
+  nav.tabs{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);
+    backdrop-filter:saturate(1.4) blur(6px); border-bottom:1px solid var(--line)}
+  .tabrow{display:flex;gap:4px;overflow-x:auto;padding:8px 0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabrow::-webkit-scrollbar{display:none}
+  .tabrow button{
+    flex:0 0 auto; border:1px solid transparent; background:transparent; color:var(--muted);
+    font:inherit; font-weight:600; font-size:.92rem; padding:8px 14px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  }
+  .tabrow button:hover{color:var(--ink);background:var(--brand-soft)}
+  .tabrow button[aria-selected="true"]{color:var(--brand);background:var(--brand-soft);border-color:#d4e2fb}
+
+  /* sections */
+  main{padding:22px 0 8px}
+  section[role=tabpanel]{display:none;animation:fade .18s ease}
+  section[role=tabpanel].active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  h2.h{font-size:1.56rem;margin:2px 0 6px}
+  .sub{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+  h3{font-size:1.02rem;margin:26px 0 8px}
+  p{margin:8px 0}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 16px;margin:14px 0}
+  .panel > :first-child{margin-top:0}
+  .panel > :last-child{margin-bottom:0}
+
+  /* stat cards */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+  .stat .n{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;line-height:1.2}
+  .stat .k{color:var(--muted);font-size:.82rem;margin-top:2px}
+
+  /* principle list */
+  ol.principle{counter-reset:p;list-style:none;padding:0;margin:10px 0}
+  ol.principle li{counter-increment:p;position:relative;padding:10px 12px 10px 46px;border:1px solid var(--line);border-radius:10px;margin:8px 0;background:#fff}
+  ol.principle li::before{content:counter(p);position:absolute;left:12px;top:10px;width:24px;height:24px;border-radius:50%;
+    background:var(--brand);color:#fff;font-weight:700;font-size:.85rem;display:grid;place-items:center}
+
+  /* tables */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:10px 0;-webkit-overflow-scrolling:touch}
+  table{border-collapse:collapse;width:100%;min-width:440px;font-size:.9rem}
+  caption{caption-side:top;text-align:left;font-weight:700;padding:10px 12px 2px;font-size:.95rem}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{background:#f2f5f9;color:var(--muted);font-weight:700;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  td code{color:var(--code)}
+
+  /* badges & verdict */
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:.78rem;font-weight:700;line-height:1.7}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)}
+  .pill.warn{background:var(--warn-soft);color:var(--warn)}
+  .pill.info{background:var(--info-soft);color:var(--info)}
+  .pill.fail{background:#fdecec;color:var(--danger)}
+  .verdict{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+
+  /* trap cards */
+  .traps{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin:12px 0}
+  .trap{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:12px 14px;box-shadow:var(--shadow)}
+  .trap h4{margin:0 0 4px;font-size:.98rem}
+  .trap .tref{color:var(--muted);font-size:.76rem;font-weight:600}
+  .trap p{margin:6px 0 0;font-size:.9rem;color:#333}
+
+  /* steps */
+  ol.steps{padding-left:0;counter-reset:s;list-style:none;margin:12px 0}
+  ol.steps > li{counter-increment:s;position:relative;padding:2px 0 16px 40px;border-left:2px solid var(--line);margin-left:12px}
+  ol.steps > li:last-child{border-left-color:transparent}
+  ol.steps > li::before{content:counter(s);position:absolute;left:-14px;top:0;width:26px;height:26px;border-radius:50%;
+    background:#fff;border:2px solid var(--brand);color:var(--brand);font-weight:700;font-size:.85rem;display:grid;place-items:center}
+  ol.steps h4{margin:0 0 4px;font-size:.98rem}
+
+  pre{background:var(--code);color:#e6edf3;border-radius:10px;padding:14px;overflow-x:auto;font-size:.85rem;line-height:1.5;margin:10px 0}
+  pre code{color:inherit}
+  .inlinecode{background:#eef1f5;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+
+  .note{background:var(--info-soft);border:1px solid #dcdef2;border-radius:10px;padding:10px 14px;margin:12px 0;font-size:.9rem}
+  .note b{color:var(--info)}
+
+  /* research cards */
+  .chapters{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:14px 0}
+  .chap{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .chap .cnum{font-size:.76rem;font-weight:700;color:var(--brand);letter-spacing:.04em}
+  .chap h4{margin:2px 0 6px;font-size:1.02rem}
+  .chap .cph{color:var(--muted);font-size:.86rem;flex:1}
+  .chap .clinks{display:flex;gap:8px;margin-top:12px}
+  .chap .clinks a{flex:1;text-align:center;font-size:.84rem;font-weight:600;padding:7px 8px;border-radius:8px;border:1px solid var(--line)}
+  .chap .clinks a.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .chap .clinks a.primary:hover{text-decoration:none;opacity:.92}
+  .chap .clinks a.ghost:hover{text-decoration:none;background:var(--brand-soft)}
+  .chap.featured{grid-column:1/-1;border-color:#c9dcfa;background:linear-gradient(180deg,#f5f9ff,#ffffff)}
+  .chap.featured .cnum{color:#0f56c9}
+  .chap.featured h4{font-size:1.1rem}
+  .chap.ready .cph{color:var(--ink)}
+
+  /* ===== Research tab — chapter cards (matches dashboard theme) ===== */
+  .mono-card{display:grid;grid-template-columns:60px 1fr;gap:18px;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);padding:20px 22px;margin:14px 0;box-shadow:var(--shadow)}
+  .mono-card.placeholder{background:#fafbfc}
+  .mono-num{font-size:2.4rem;line-height:1;color:var(--brand);font-weight:700}
+  .mono-body>:first-child{margin-top:0}
+  .mono-chlabel{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:2px 0 3px}
+  .mono-chtitle{font-size:1.1rem;line-height:1.25;margin:0 0 4px;font-weight:700;color:var(--ink)}
+  .mono-chsub{color:var(--muted);margin:0 0 12px;font-size:.95rem}
+  .mono-desc{margin:0 0 12px;color:var(--ink);line-height:1.6;font-size:.96rem}
+  .mono-bullets{list-style:disc;padding-left:20px;margin:0 0 16px}
+  .mono-bullets li{margin:6px 0;color:var(--ink);line-height:1.55;font-size:.94rem}
+  .mono-bullets li::marker{color:var(--brand)}
+  .mono-figs{display:flex;gap:12px;flex-wrap:wrap;margin:0 0 16px}
+  .mono-figs img{width:210px;max-width:47%;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .mono-links{display:flex;flex-wrap:wrap;gap:20px;border-top:1px solid var(--line);padding-top:13px}
+  .mono-links a{color:var(--brand);font-weight:600;font-size:.92rem;text-decoration:none}
+  .mono-links a::after{content:" \2197"}
+  .mono-links a:hover{text-decoration:underline}
+  .mono-links a.disabled{color:var(--muted);pointer-events:none;opacity:.6}
+  @media (max-width:560px){
+    .mono-card{grid-template-columns:1fr;padding:16px 16px;gap:2px}
+    .mono-num{font-size:1.9rem;margin-bottom:2px}
+  }
+
+  .btnrow{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+  .btn{display:inline-block;padding:9px 16px;border-radius:9px;font-weight:600;font-size:.92rem;border:1px solid var(--line);background:#fff}
+  .btn.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+  .btn.primary:hover{text-decoration:none;opacity:.92}
+
+  /* footer */
+  footer{border-top:1px solid var(--line);margin-top:26px;padding:20px 0 40px;color:var(--muted);font-size:.84rem;background:#fff}
+  footer .ver{display:inline-block;background:#eef1f5;border:1px solid var(--line);border-radius:999px;padding:3px 12px;font-weight:700;color:var(--ink);margin-bottom:8px}
+  footer p{margin:6px 0}
+
+  @media (max-width:420px){
+    .brand h1{font-size:1.625rem}
+    .stat .n{font-size:1.28rem}
+    h2.h{font-size:1.4rem}
+  }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>관세청 무역통계 DB</h1>
+      <span class="tag">KCSDB2</span>
+    </div>
+    <p class="lede">이 데이터베이스는 관세청이 OpenAPI(품목별 국가별 수출입실적(GW), <a href="https://www.data.go.kr/data/15100475/openapi.do" target="_blank" rel="noopener">https://www.data.go.kr/data/15100475/openapi.do</a>)로 공개하는 월별 수출입 통계를 2007년 1월부터 2026년 3월까지 한데 모아 하나의 파일로 만든 것이다.</p>
+  </div>
+</header>
+
+<nav class="tabs">
+  <div class="wrap">
+    <div class="tabrow" role="tablist" aria-label="대시보드 탭">
+      <button role="tab" aria-selected="true"  aria-controls="tab-overview" id="t-overview">개요</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-build"    id="t-build">DB 구축</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-traps"    id="t-traps">데이터 함정</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-use"      id="t-use">받기·사용</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-research" id="t-research">연구</button>
+    </div>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+
+  <!-- ============ 개요 ============ -->
+  <section role="tabpanel" id="tab-overview" aria-labelledby="t-overview" class="active">
+    <h2 class="h">개요</h2>
+    <p class="sub">이 DB가 무엇을 담고, 어떤 설계 원칙 위에 서 있는지.</p>
+
+    <div class="panel">
+      <p><b>무엇인가.</b> 관세청 무역통계 원본(2007.01–2026.03)을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다.</p>
+      <p><b>왜 만들었나.</b> 관세청 OpenAPI는 한 번에 특정 월·특정 국가의 데이터만 돌려준다. 20년 치 전체를 분석하려면 수만 번의 호출 결과를 모으고, 중간에 세 번(2007→2012→2017→2022) 바뀐 HS 품목코드를 이어 붙이는 작업을 매번 반복해야 한다. 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
+      <p><b>누구를 위한 것인가.</b> 무역 데이터를 받아 직접 분석하려는 연구자가 주 독자다. 로컬 주피터 노트북에서 읽어 쓰는 것을 전제로 한다. 받아서 쓰는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭에 있다.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="n">27,533,937</div><div class="k">fact_trade 거래행</div></div>
+      <div class="stat"><div class="n">2007.01–2026.03</div><div class="k">데이터 범위 (231개월)</div></div>
+      <div class="stat"><div class="n">240</div><div class="k">국가 (stat_cd)</div></div>
+      <div class="stat"><div class="n">15,403</div><div class="k">HS10 품목 종수</div></div>
+    </div>
+
+    <h3>설계 원칙 세 문장</h3>
+    <p>이 DB의 모든 결정은 하나의 최상위 원칙에서 나온다 — <b>DB는 관세청 원본을 최대한 그대로 담고, 분석을 위한 가공은 DB가 아니라 분석 계층에서 한다.</b> 이 원칙을 세 문장으로 압축하면 다음과 같다.</p>
+    <ol class="principle">
+      <li><b>fact(사실 테이블)는 관세청 API 응답 필드만 담는다.</b> 연·월을 따로 쪼갠 컬럼, HS 코드를 잘라 만든 상위 코드(hs2·hs4·hs6), 국명·품목명 같은 것은 원본에 없는 <em>파생값</em>이므로 fact에 넣지 않는다. 이런 값이 필요하면 아래 dim 테이블과 조인해서 얻는다. fact를 원본 그대로 두어야 나중에 어떤 분석이 와도 왜곡 없이 출발할 수 있다.</li>
+      <li><b>관측값을 변형하지 않는다.</b> 관세청이 준 값은 그대로 저장한다 — 금액 0, 음수 중량(사후 정정), 초기 연도의 후행 공백까지 손대지 않는다. "이상해 보이니 고친다"가 아니라 "원본이 그러하니 보존한다"가 기준이다. 이상치 판단과 처리는 분석하는 연구자의 몫으로 남긴다.</li>
+      <li><b>연결과 참조는 dim(차원 테이블)이 담당한다.</b> 시간이 지나며 바뀌는 HS 품목코드의 개정 연결, 국가코드에 붙는 표준 국명·ISO·대륙, HS10에 붙는 품목명·단위는 모두 dim 테이블이 제공한다. fact는 raw로 두고, "무엇과 무엇을 잇는가"는 dim에서 처리한다. 매 분석마다 반복하던 연결 작업을 DB 계층에서 한 번에 끝내는 것이 핵심이다.</li>
+    </ol>
+
+    <div class="btnrow">
+      <a class="btn primary" href="https://github.com/pilsunchoi/KCSDB2" target="_blank" rel="noopener">GitHub 저장소</a>
+      <a class="btn" href="https://github.com/pilsunchoi/KCSDB2/releases" target="_blank" rel="noopener">Releases (DB 내려받기)</a>
+    </div>
+    <p class="sub" style="margin-top:6px">DB 실물(<code>kcsdb.duckdb</code>, 약 681MB)은 저장소가 아니라 Releases 첨부로 배포된다. 받는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭 참조.</p>
+  </section>
+
+  <!-- ============ DB 구축 ============ -->
+  <section role="tabpanel" id="tab-build" aria-labelledby="t-build">
+    <h2 class="h">DB 구축</h2>
+    <p class="sub">계층 분리 · 스키마 · HS6 연결 · 커버리지 · 검증.</p>
+
+    <h3>계층 분리</h3>
+    <div class="panel">
+      <p>이 DB는 일을 두 계층으로 나눈다. <b>DB 계층</b>은 관세청 원본을 정확히 보존하고 연결·검증까지만 책임진다. 단가 계산, 품목의 진입·퇴출 분석, 위기 국면 비교 같은 <b>분석</b>은 DB가 하지 않고, DB 밖의 별도 스크립트(분석 계층)에서 한다.</p>
+      <p class="sub" style="margin:6px 0 12px">이렇게 나누는 이유는, 특정 분석에 편리하도록 DB를 미리 가공해 두면 그 가공이 다른 분석에서는 오히려 방해가 되기 때문이다. DB를 raw로 중립적으로 두면 어떤 분석이든 같은 출발선에서 시작할 수 있다.</p>
+      <div class="tblwrap">
+        <table>
+          <thead><tr><th>DB 계층 (이 DB의 책임)</th><th>분석 계층 (DB 밖, 별도 스크립트)</th></tr></thead>
+          <tbody>
+            <tr><td>raw 적재 (fact_trade, fact_total)</td><td>HS10→HS6 절단 <code>SUBSTR(hs10,1,6)</code></td></tr>
+            <tr><td>참조·연결 (dim_country, dim_hs10, dim_hs6_concordance)</td><td>단가(금액/중량) 계산, wgt=0 처리</td></tr>
+            <tr><td>내부 무결성 검증</td><td>margin 분해 · granularity · 위기더미 등</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sub" style="margin:6px 0 0">분해 방법론 결함(HS6 셀 내 단가 이질성 등)은 분석 계층 사안이다. DB는 raw를 정확히 보존해 분석 계층이 올바르게 처리할 수 있게 한다.</p>
+    </div>
+
+    <h3>fact 스키마 (관세청 raw)</h3>
+    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. 두 종류가 있다. <code>fact_trade</code>는 <b>국가 × HS10 품목 × 월</b> 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 <b>국가 × 월</b>로 합산된 총계 행이다. 둘 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
+    <div class="tblwrap">
+      <table>
+        <caption>fact_trade — 거래 행 (국가 × HS10 × 월), 8필드</caption>
+        <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><code>yyyymm</code></td><td>파일명</td><td>호출 시기. 응답 year(YYYY.MM)와 일치 검증</td></tr>
+          <tr><td><code>stat_cd</code></td><td>응답 statCd</td><td>관세청 원본. 변형 없음</td></tr>
+          <tr><td><code>hs10</code></td><td>응답 hsCd</td><td>관세청 원본 (strip만)</td></tr>
+          <tr><td><code>exp_dlr</code></td><td>응답 expDlr</td><td>수출 금액</td></tr>
+          <tr><td><code>imp_dlr</code></td><td>응답 impDlr</td><td>수입 금액</td></tr>
+          <tr><td><code>exp_wgt</code></td><td>응답 expWgt</td><td>수출 중량</td></tr>
+          <tr><td><code>imp_wgt</code></td><td>응답 impWgt</td><td>수입 중량</td></tr>
+          <tr><td><code>bal_payments</code></td><td>응답 balPayments</td><td>exp_dlr−imp_dlr과 항등이나 API 제공값이므로 보존</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <caption>fact_total — 국가 × 월 총계, 7필드 (HS 컬럼 없음)</caption>
+        <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><code>yyyymm</code></td><td>파일명</td><td></td></tr>
+          <tr><td><code>stat_cd</code></td><td>파일명</td><td>응답은 <code>-</code>. 파일명 유래 파생 (유일하게 허용하는 파생)</td></tr>
+          <tr><td><code>exp_dlr / imp_dlr</code></td><td>응답</td><td>금액</td></tr>
+          <tr><td><code>exp_wgt / imp_wgt</code></td><td>응답</td><td>중량</td></tr>
+          <tr><td><code>bal_payments</code></td><td>응답</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sub">fact_total 56,133행. 총계 행은 응답에 국가코드가 없어 stat_cd를 파일명에서 추출한다 — 이것이 DB 전체에서 유일하게 허용하는 파생이다.</p>
+
+    <div class="note">
+      <b>수치의 집계 기준 (관세청 정의).</b>
+      수출입 신고 통관 자료를 <b>국가 및 HS Code(2·4·6·10단위)별</b>로 집계한 국가별 품목별 무역통계다.
+      <b>금액</b>은 미화(USD)이며, 수출은 <b>FOB</b>(신고금액), 수입은 <b>CIF</b>(과세가격) 기준이다.
+      <b>중량</b>은 순중량(kg).
+      <b>국가</b>는 수출은 <b>최종목적국</b>, 수입은 <b>원산국</b>을 원칙으로 하며 무역통계부호상 ISO 코드로 분류한다.
+      단순 <b>통과물품이나 일시 반입·반출 물품은 제외</b>된다(물적 자원의 증감이 없으므로).
+      통계는 매월 수출입 신고의 정정·취하를 반영해 전월까지 자료를 현행화한다(주기 1개월).
+    </div>
+
+    <h3>dim 스키마 (연결·참조)</h3>
+    <p>dim은 fact의 코드에 의미를 붙여 주는 참조 테이블이다. fact에는 <code>stat_cd</code>(국가코드)나 <code>hs10</code>(품목코드) 같은 <em>코드</em>만 있고 이름이 없다. 어느 나라인지, 무슨 품목인지, 개정 전 코드는 무엇이었는지를 알려면 아래 세 dim 테이블과 조인한다. 핵심은 <b>fact를 훼손하지 않고 이름·연결을 옆에 병기</b>한다는 점이다.</p>
+    <div class="tblwrap">
+      <table>
+        <caption>dim 테이블</caption>
+        <thead><tr><th>테이블</th><th>키</th><th>담는 것</th></tr></thead>
+        <tbody>
+          <tr><td><code>dim_country</code></td><td>stat_cd</td><td>관세청 국명(원본 보존) + 외교부 표준명·ISO2/3·대륙(참조 병기). 미매칭 시 참조는 NULL("없으면 없는 대로")</td></tr>
+          <tr><td><code>dim_hs10</code></td><td>hs10</td><td>관세청 품목명(한/영)·수량·중량단위·발효일(valid_from, 실측)·등장범위</td></tr>
+          <tr><td><code>dim_hs6_concordance</code></td><td>(hs2022, hs_past, past_version)</td><td>HS 개정 간 다대다 대응. relation: identity / mapped / deleted / new</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>HS6 개정 연결</h3>
+    <div class="panel">
+      <p><b>무엇이 문제인가.</b> HS 품목코드는 국제 협약에 따라 5년마다 개정된다(이 데이터 기간에는 2007·2012·2017·2022 네 판본이 걸쳐 있다). 개정 때 코드가 신설·폐지·통합·분할되기 때문에, <b>같은 상품인데도 연도에 따라 코드가 달라진다.</b> 코드가 같은지만 보고 시계열을 이으면, 개정으로 코드가 바뀐 품목은 도중에 끊기거나 엉뚱하게 이어진다. 이 끊김을 메우는 것이 <code>dim_hs6_concordance</code> 테이블이다.</p>
+      <p><b>개정 시점.</b> 각 판본은 개정 연도 1월 1일부터 적용된다. 이 데이터(2007.01–2026.03)에 걸친 네 판본의 적용 구간은 다음과 같다.</p>
+      <div class="tblwrap">
+        <table>
+          <caption>HS 판본별 적용 구간</caption>
+          <thead><tr><th>HS 판본</th><th>적용 시작</th><th>이 데이터에서의 구간</th></tr></thead>
+          <tbody>
+            <tr><td>HS2007</td><td>2007.01</td><td>2007.01 – 2011.12</td></tr>
+            <tr><td>HS2012</td><td>2012.01</td><td>2012.01 – 2016.12</td></tr>
+            <tr><td>HS2017</td><td>2017.01</td><td>2017.01 – 2021.12</td></tr>
+            <tr><td>HS2022</td><td>2022.01</td><td>2022.01 – 2026.03 (데이터 끝)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sub" style="margin:2px 0 6px">즉 한 시계열이 2007~2026 전체를 지나가면 개정 경계 세 곳(2012·2017·2022 초)을 넘는다. 시기별로 그 시점에 유효한 판본을 골라 concordance로 이어야 한다.</p>
+      <p><b>왜 HS10이 아니라 HS6 단위로 잇는가.</b></p>
+      <ul>
+        <li>관세청이 공식 공개하는 연계표(FTA 원산지 판정용)가 <b>HS6까지만</b> 존재한다. HS10 단위의 공식 개정 대응표는 공개돼 있지 않다.</li>
+        <li>수출 변동 분해, 품목 다양성(granularity), 마진 분해 같은 경제 분석의 사실상 표준 해상도가 HS6다. 즉 대부분의 분석에 HS6면 충분하다.</li>
+        <li>HS10까지 내려가 다대다로 이으려면 자료 접근도 불확실하고 규칙 설계도 복잡해져, "원본 보존 + 최소한의 연결"이라는 이 DB의 원칙에서 벗어난다.</li>
+      </ul>
+      <p class="sub" style="margin:2px 0 10px">그래서 fact에는 HS10 원본을 그대로 두고, 분석할 때 앞 6자리로 잘라(<code>SUBSTR(hs10,1,6)</code>) concordance로 잇는다. 절단은 분석 계층에서 한다.</p>
+      <p><b>다대다 관계라 1:1 치환이 안 된다.</b> 개정은 단순 이름 변경이 아니다. 하나의 2022 코드가 옛 코드 여러 개로 갈라지거나(분할), 옛 코드 여러 개가 하나의 2022 코드로 합쳐진다(통합). 예를 들어 2022년 <code>010130</code>은 2007년 <code>010110</code>과 <code>010190</code> 둘 모두에 대응한다. DB는 이 다대다 관계에 억지 규칙을 세우지 않고 <b>있는 그대로 보존</b>하며, "어느 코드들이 같은 상품군인가"를 묶는 계산(연결 컴포넌트)은 분석 계층에서 한다.</p>
+      <p><b>HS2022를 허브로 하는 별(星) 모양 구조.</b> 세 연계표는 모두 최신판 HS2022를 기준점으로 삼아 과거 각 판본(2007/2012/2017)에 각각 대응한다. 2007을 직접 2012에 잇는 표는 없지만, 가장 먼 2022→2007 표가 전 구간을 덮으므로 세 표를 HS2022 허브로 결합하면 2007~2022 전체를 연결할 수 있다.</p>
+      <div class="tblwrap">
+        <table>
+          <caption>3개 연계표 출처 (관세청 FTA 포털, 공공누리 제1유형)</caption>
+          <thead><tr><th>연계표</th><th>concordance 행수</th></tr></thead>
+          <tbody>
+            <tr><td>HS2022 → 2007</td><td>6,592</td></tr>
+            <tr><td>HS2022 → 2012</td><td>6,415</td></tr>
+            <tr><td>HS2022 → 2017</td><td>5,937</td></tr>
+            <tr><td><b>합계 (dim_hs6_concordance)</b></td><td><b>18,944</b></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <h3>커버리지</h3>
+    <p>커버리지는 "fact의 코드가 dim에서 얼마나 이름·연결을 얻는가"를 나타내는 지표다. 국가는 240개 모두 매칭되고, 기간도 231개월이 빠짐없이 이어진다. 다만 품목코드는 100%가 아니다 — 그 이유와 실제 영향은 아래에서 설명한다.</p>
+    <div class="stats">
+      <div class="stat"><div class="n">231개월</div><div class="k">2007.01–2026.03 연속(빠짐 없음)</div></div>
+      <div class="stat"><div class="n">240 / 240</div><div class="k">국가 dim 매칭 (미매칭 0)</div></div>
+      <div class="stat"><div class="n">15,403종</div><div class="k">HS10 (fact 등장)</div></div>
+      <div class="stat"><div class="n">72.8%</div><div class="k">hs10 → dim_hs10 (11,209/15,403)</div></div>
+    </div>
+    <div class="tblwrap">
+      <table>
+        <caption>concordance 커버리지 (fact hs6 → hs_past 매칭, 종수 기준)</caption>
+        <thead><tr><th>버전</th><th>커버리지</th></tr></thead>
+        <tbody>
+          <tr><td>2007</td><td>66.1%</td></tr>
+          <tr><td>2012</td><td>71.1%</td></tr>
+          <tr><td>2017</td><td>80.8%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <b>읽는 법.</b> 위 concordance 수치는 <b>종수 기준·가정적 상한</b>이다(전 기간에 한 버전을 일괄 적용). 시기별 올바른 버전 + 거래액 기준으로 실측하면 미매칭은 <b>0.004~0.007%</b>에 불과하다(완전 사각지대 130종, 거래액 0.004%). hs10 커버리지 72.8%의 미매칭 27.2%(폐지코드)도 HS6 이하 해상도 분석에서는 concordance로 계열 식별이 가능해 문제가 되지 않는다. 자세한 판정은 <a href="#" onclick="showTab('traps');return false">데이터 함정</a> 탭 참조.
+    </div>
+
+    <h3>검증 — 04_validate 5계층</h3>
+    <p>DB를 다 만든 뒤, 단일 스크립트(<code>04_validate.py</code>)가 다섯 계층(스키마 / 값 / 적재 / dim / concordance)을 자동 점검한다. 예컨대 "우리가 만들지 않기로 한 파생 컬럼이 섞여 들지 않았는가", "수집된 데이터가 하나도 빠짐없이 적재됐는가", "<code>bal_payments = exp_dlr − imp_dlr</code> 항등식이 전 행에서 성립하는가"를 확인한다. 결과는 네 등급으로 표시된다.</p>
+    <div class="verdict">
+      <span class="pill ok">PASS 9</span>
+      <span class="pill warn">WARN 4</span>
+      <span class="pill info">INFO 1</span>
+      <span class="pill fail">FAIL 0</span>
+    </div>
+    <p><b>PASS</b>는 통과, <b>FAIL</b>은 반드시 고쳐야 할 무결성 위반, <b>WARN</b>은 주의가 필요하나 결함은 아닌 항목, <b>INFO</b>는 참고 사항이다. <b>FAIL이 0</b>이라는 것이 가장 중요하다 — 무결성 위반이 하나도 없다는 뜻이다. WARN 4는 전부 원자료(관세청 공개자료) 자체의 한계(품목 커버리지 등)이지 DB가 잘못 만들어진 것이 아니다. INFO 1은 음수 중량 19행(관세청의 사후 정정 원본이므로 보존). 참고로 bal_payments 항등식은 2,753만 행 전체에서 위반 0으로 통과했다.</p>
+  </section>
+
+  <!-- ============ 데이터 함정 ============ -->
+  <section role="tabpanel" id="tab-traps" aria-labelledby="t-traps">
+    <h2 class="h">데이터 함정</h2>
+    <p class="sub">DB를 만들며 실측으로 확인한, 모르고 쓰면 결과를 틀리게 만드는 지점들.</p>
+    <div class="panel" style="margin-top:0">
+      <p>"함정"은 DB의 버그가 아니다. 대부분은 관세청 원본 데이터 자체의 특성이거나, 분석할 때 짚고 넘어가야 하는 주의점이다. 이 DB는 원본을 그대로 보존하는 것이 원칙이므로 이런 값들을 임의로 고치지 않는다 — 대신 여기에 미리 목록으로 드러내, 분석하는 연구자가 각자 상황에 맞게 처리하도록 한다. 아래 카드마다 <b>무엇이 문제이고, 왜 그런지, 어떻게 대응하는지</b>를 담았다.</p>
+    </div>
+
+    <div class="traps">
+      <div class="trap">
+        <div class="tref">국가코드 · §1.1</div>
+        <h4>나미비아 ISO2 = 'NA' → NULL 오변환</h4>
+        <p>외교부 CSV에서 나미비아 ISO2는 <code>NA</code>. pandas <code>read_csv</code>의 기본 na_values가 이를 결측으로 오변환한다. 처리 없이 dim_country를 만들면 나미비아가 조인 키 결측으로 탈락. 해결: <code>keep_default_na=False, na_values=[""]</code>.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">HS 개정 · §1.4–1.5 / §2.2</div>
+        <h4>HS 개정 비대칭 (허브 스타형 사각지대)</h4>
+        <p>연계표가 HS2022 허브 스타형이라 2007에서 가장 먼 구간의 사각지대가 크다. 2007에 있다가 2022 이전 완전 소멸한 HS6는 세 연계표 어디에도 없다 — 완전 사각지대 130종, 거래액 0.004%. 커버리지 66.1/71.1/80.8%는 종수·가정적 상한이며 거래액 실측 손실은 0.004~0.007%.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">원본 값 · §1.6</div>
+        <h4>음수 중량 19행</h4>
+        <p>fact_trade에 중량 음수 19행. 전부 금액은 0 이상. 관세청의 중량 사후 정정(반품·수정신고 상계)으로 파싱 오류가 아니다. 원본 보존. 단가=금액/중량 계산 시 이상치이므로 분석 계층에서 처리.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">단가 계산 · 원칙 §1.3</div>
+        <h4>wgt = 0 인데 dlr &gt; 0 (단가 불가)</h4>
+        <p>소액 거래에서 kg 미만이 반올림돼 중량이 0이 된 행(예: expDlr=65, expWgt=0). 이 행은 <code>단가=금액/중량</code> 계산을 불가능하게 만든다. DB는 (65, 0)을 그대로 보존한다 — 분석 계층의 제약이지 DB 결함이 아니다.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">공개 시점 · §1.7</div>
+        <h4>2단계 공개 (잠정월 함정) · 2026 빈 응답</h4>
+        <p>관세청은 월통계를 2단계로 공개한다 — 먼저 국가별 총계(잠정), 이후 HS10 품목 명세(확정). 총계만 있고 명세가 없는 잠정월은 제거(202604·202605 각 243행). 미공개월은 items=0 빈 응답으로 오며 임의값으로 채우지 않는다. 확정 범위: 200701–202603.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">결측 표현 · §1.2</div>
+        <h4>결측과 0을 구분하지 않는다</h4>
+        <p>수치 태그(expDlr/impDlr/expWgt/impWgt/balPayments)는 항상 존재하고 값이 없으면 0으로 온다. 원본에 NULL이 없다. "관측값 없으면 NULL" 원칙은 이 데이터에 적용 불가능하며, <code>int(값)</code> 캐스팅은 손실이 아니다.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">품목명 · §1.3</div>
+        <h4>한글품목명은 최말단 세분만</h4>
+        <p>HS부호 파일의 한글품목명은 HS10 최말단 서술만 담는다(예: <code>0101291000</code> = "경주말"). 이것이 말(馬)인지 상위 맥락이 없다. 완전한 서술이 필요하면 상위 HS 조인 또는 HS6 concordance로 분석 계층에서 해결. DB는 서술을 합성하지 않는다.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">폐지 표기 · §1.5</div>
+        <h4>'삭제' 폐지 표기</h4>
+        <p>2022→2017 연계표에 <code>(삭제, 300219)</code> 행 — 2017 코드가 2022에서 폐지되어 대응 코드 없음. <code>relation='deleted'</code>로 보존(제거 아님). 품목 퇴출 정보는 개정 간 연속성 분석에 쓰일 수 있다.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">검증 기준 · §1.8</div>
+        <h4>meta item_count 총계행 미집계</h4>
+        <p>수집 단계 item_count는 총계행을 세지 않아 거래 0건 페어에서 item_count=0이나 fact_total엔 1행 존재(4,642개). item_count는 fact 행수 대조 기준으로 부적합. 검증은 총합 비교를 폐기하고 "수집→적재 누락 감지"로 전환.</p>
+      </div>
+      <div class="trap">
+        <div class="tref">폐지코드 · §2.1</div>
+        <h4>hs10 폐지코드 품목명 NULL (72.8%)</h4>
+        <p>fact hs10 15,403종 중 4,194종(27.2%)이 2026 HS부호 스냅샷에 없는 폐지코드라 dim_hs10 품목명이 NULL("정직한 NULL"). HS6 이하 해상도 분석은 hs6 절단으로 소거돼 무영향. HS10 세분 품목명을 쓰는 분석에서만 제약(과거 파일 확보 경로는 data.go.kr에 없음).</p>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>봉인.</b> hs10 커버리지 72.8%와 concordance WARN 수치는 재구축 세션에서 "결함"으로 오판했다가 재측정으로 착시임이 판명됐다. 거래액 기준 실손은 0.004~0.007%로 미미하다. 개수 기반 지표(품목 진입·퇴출 계수 등)나 HS10 세분 분석으로 내려갈 때만 재검토가 정당하다. 상세는 <code>docs/세션_발견_노트.md</code> 0절.
+    </div>
+  </section>
+
+  <!-- ============ 받기·사용 ============ -->
+  <section role="tabpanel" id="tab-use" aria-labelledby="t-use">
+    <h2 class="h">받기·사용</h2>
+    <p class="sub">DB를 받아 로컬 주피터에서 분석하려는 연구자를 위한 안내.</p>
+
+    <p><b>먼저 알아둘 것 — 받을 것이 둘로 나뉜다.</b> 이 DB는 두 부분으로 배포된다. 하나는 <b>분석 코드·노트북·폴더 구조</b>가 담긴 GitHub <b>저장소</b>이고, 다른 하나는 <b>DB 파일 자체</b>(<code>kcsdb.duckdb</code>, 약 681MB)다. DB 파일은 용량이 커서 GitHub 저장소에 넣을 수 없기 때문에(100MB 한도), <b>저장소는 clone으로 받고 DB 파일은 Releases에서 따로 받아</b> 저장소 안 정해진 자리에 놓는 방식이다.</p>
+    <p>전체 흐름은 네 단계다 — <b>패키지 설치 → 저장소 받기 → DB 파일 받아 배치 → 주피터에서 열기</b>. DB를 재구축하는 것이 아니라 이미 만들어진 DB를 받아 분석만 하므로 준비물은 가볍다(파이썬 패키지 4개). 순서대로 따라 하면 된다.</p>
+
+    <ol class="steps">
+      <li>
+        <h4>패키지 설치</h4>
+        <p>터미널(명령 프롬프트 / PowerShell / 터미널)에서 아래를 실행한다. 분석만 하므로 이 4개면 충분하다 — conda나 특정 파이썬 버전은 필요 없다.</p>
+        <pre><code>pip install duckdb pandas matplotlib jupyter</code></pre>
+      </li>
+      <li>
+        <h4>저장소 받기 (코드·노트북)</h4>
+        <p>GitHub에서 이 저장소를 clone(또는 ZIP 다운로드 후 압축 해제)하면 <code>KCSDB2/</code> 폴더가 생긴다. 분석에 필요한 것이 모두 이 안에 들어 있다.</p>
+        <pre><code>git clone https://github.com/pilsunchoi/KCSDB2.git</code></pre>
+        <ul>
+          <li><code>notebooks/analysis_start.ipynb</code> — 시작용 분석 노트북 (4단계에서 연다)</li>
+          <li><code>scripts/</code> · <code>docs/</code> · <code>data/external/</code> — 파이프라인 스크립트·문서·외부 참조자료</li>
+          <li><code>data/processed/</code> — <b>지금은 비어 있는</b> 폴더. 다음 단계에서 받을 DB를 여기에 놓는다.</li>
+        </ul>
+        <p class="sub" style="margin:6px 0 0">즉 노트북은 이 저장소에 함께 들어 있어 따로 받을 필요가 없다. 오직 용량이 큰 DB 파일만 저장소에 없어서 다음 단계에서 따로 받는다.</p>
+      </li>
+      <li>
+        <h4>DB 파일 받아서 배치</h4>
+        <p>앞 단계에서 저장소를 받았으니 <code>data/processed/</code> 폴더는 이미 있다(비어 있음). 이제 <a href="https://github.com/pilsunchoi/KCSDB2/releases" target="_blank" rel="noopener">Releases 페이지</a>에서 압축된 DB <code>kcsdb.duckdb.gz</code>를 받아 압축을 풀고, 그 파일을 <code>data/processed/kcsdb.duckdb</code> 자리에 놓는다.</p>
+        <ul>
+          <li>Windows: 7-Zip 등으로 <code>.gz</code> 압축 해제</li>
+          <li>Mac / Linux: 터미널에서 <code>gunzip kcsdb.duckdb.gz</code></li>
+        </ul>
+        <p class="sub" style="margin:6px 0 0">노트북은 이 <code>data/processed/kcsdb.duckdb</code> 경로에서 DB를 읽으므로, 파일 이름과 위치를 그대로 맞춰 두는 것이 중요하다.</p>
+      </li>
+      <li>
+        <h4>주피터에서 열기</h4>
+        <p>준비가 끝났다. 저장소 루트(<code>KCSDB2/</code>)에서 아래를 실행하면 브라우저에 주피터가 열린다. 2단계에서 함께 받은 <code>notebooks/analysis_start.ipynb</code>를 열고 셀을 위에서부터 차례로 실행하면, DB 접속 → 구조 확인 → 기술통계 시연이 순서대로 나온다.</p>
+        <pre><code>jupyter notebook</code></pre>
+      </li>
+    </ol>
+
+    <h3>기본 접속 코드</h3>
+    <p>DuckDB는 파일 하나에 접속하는 방식이라 서버가 필요 없다. 아래처럼 <code>read_only=True</code>로 열면 실수로 원본을 바꿀 염려 없이 안전하게 조회만 할 수 있다. 여러 사람이 같은 파일을 동시에 읽을 때도 이 옵션이 안전하다. 작업이 끝나면 <code>con.close()</code>로 닫는다.</p>
+    <pre><code>import duckdb
+con = duckdb.connect("data/processed/kcsdb.duckdb", read_only=True)
+print(con.sql("SELECT COUNT(*) FROM fact_trade").fetchone())
+con.close()</code></pre>
+
+    <div class="note">
+      <b>단위 표기.</b> 금액은 미화 달러(USD) — 수출 FOB·수입 CIF 기준. 중량은 순중량 kg.<br>
+      <b>범위 경계.</b> 데이터는 202603까지이며 2026은 부분년(1–3월)이므로 연도 비교 시 제외한다.
+    </div>
+
+    <p class="sub">위 안내는 이미 만들어진 DB를 <b>받아 쓰는 연구자</b>를 위한 것이다. 반대로 DB를 <b>만들어 나눠 주는 배포자(관리자)</b>—예컨대 새 월 데이터를 반영해 DB를 갱신하고 배포하는 사람—는 할 일이 다르다. DB 파일을 <code>.gz</code>로 압축하고, 그것을 GitHub Release에 첨부해 올리며, 관세청 API 인증키가 저장소에 실수로 올라가지 않도록 관리(<code>.gitignore</code> 처리)해야 한다. 이 배포 절차는 저장소 <code>docs/배포자_안내.md</code>에 정리돼 있다.</p>
+  </section>
+
+  <!-- ============ 연구 ============ -->
+  <section role="tabpanel" id="tab-research" aria-labelledby="t-research">
+    <div class="mono">
+      <h2 class="h">연구</h2>
+      <p class="sub">관세청 무역통계 DB(2007–2026, 2,753만 건) 위에서 수행하는 분석 챕터. 각 챕터는 렌더된 문서(Markdown·표·그림)와 그 결과를 재현하는 노트북으로 연결된다.</p>
+      <div class="note">챕터 1과 6은 실제 내용이며, 2–5는 주제 미정 자리표시자다. 시연은 방법 예시이지 분석 방향(연구 결론)이 아니다 — 이 DB는 특정 분석을 전제하지 않는다.</div>
+
+      <article class="mono-card">
+        <div class="mono-num">I</div>
+        <div class="mono-body">
+          <p class="mono-chlabel">Chapter 1</p>
+          <h3 class="mono-chtitle">한국 수출입의 20년 지형도</h3>
+          <p class="mono-chsub">교역국과 품목 구성은 어떻게 이동했는가 (2007–2026)</p>
+          <p class="mono-desc">인과 해석 없이 관측된 구조와 그 변화만 서술하는 기술통계 챕터. 교역국 순위, HS 대분류 비중, 품목 다양성·집중도, 개정을 걸친 품목 연결(concordance), 단가와 무역수지를 다룬다.</p>
+          <ul class="mono-bullets">
+            <li>2025년 수출 7,088억 달러 — 기간 최대. 상위 두 나라(중국·미국)가 전체의 35.7%.</li>
+            <li>전기·전자(HS 85) 비중이 26%에서 33%로 확대; 선박·정밀기기는 축소.</li>
+            <li>수출액의 90%를 채우는 품목은 20년째 400개대 — 집중 구조가 지속.</li>
+          </ul>
+          <div class="mono-figs">
+            <img src="data:image/png;base64,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XNXOnTs13728vFTz589X7d27N0t5OZWTHbNmzVIdOHBA9d9//6mmTJki0vbt26d6++23NXkmTpyounjxYpZ9+/Xrp0pLS8uUlpCQoPL09BR19PHxUeWFSZMmqfz9/VWrVq1SffnllyKN99lXX32Vr3y5/a6PgQMHint9zpw5qg0bNoi0mTNnqjZu3Kg3X25pbENei6+//lp169atPLVD165dxf8JEyaoTp48KT6PGzdOderUKb35fvvtN/Ecff/996rw8PAs5eVWTnaUSQ2QsEszffp00bUi6uUxhOrxw4cP9aZpax9U93UZMGCAUM0PHjwo3rg5Qa2D2sncuXPFd75J+ZanpsAuKLuw+sgtX17LIexWsnvy3nvvITIyElWqKK65HBwccl0wrr2vLi+//LJoP2qH6jbOjrt37woNit1btrG6e1KjRo1Mba4Lu+g8BrXHjRs3ZvrNkHIIu0ZcTsUurKH7ent7iy687jAANRF2tzis8OKLL+LEiRM5lkNNk914dvFzqkNe8+WnHdiO1BjZnX2Yw77a+XJKI/Xq1UO7du3EdWb78r7JCd4zH3zwQa71187H9mfX19/fXzNkUZB2KNNjgHxoOA7xyiuvoGXLliKN4yock6LwYteiUqVKetMIVW+OZTg6OmYpmyq5Wi3n+FF2sDvBsaRPP/0UNWvW1HSZuFF48SbJrgudW768lsNx0GnTpokbiYKS+/AmJexm5bRWUndffQKQTJ48WbQzux/ZCZ5vvvkGP//8s6gn25XjjeT27dtirC07pk6dqnnpsItLYaPGkHIofDdt2oSFCxdq9mVaXvYlHCOdMWNGlnS2vzq9WbNmYsikQ4cOestg959jveqXYXb1z2u+/LTDTz/9JK45u/3a+3bs2FHs26JFC735sktTU6tWLU078GV89epVve3AFy7HWTm2yeEL7Trwxcw6DB48WG8+PsfqZ1nd5VePIWZXjsnaAT7//PPiYW/evLl4ePkW4QXkhAcv1uPHj7Fz5069aYQaBwfs+aYhHBfiwG/9+vU1g/+8yBxn2L59u9468I3INxbL5puJgoJjd7y5OTZYtWpV/Prrr2Lsb/Xq1WLshuOQFNz68vHty0Fu3uD6ftenffLNzJuFAp5tQQHCY/CS379/X4wzUchxHIsChi8OjpMxj759ee6cdKEGyhuU509NmJqyepxTm3v37ombmJofx244fsTxGU4eccCdA908F2rSFDKc0OBNzTpwUogTKHygdu3ahdmzZ4vjLFq0CFOmTBHl6ytHF44dUYBOmDBBPMB8MPigU2D16dMH+/btw4oVK0RZ1GSp+fPaUfvkhAm1Zk4CqcdoeV+xrq+//rpm8J/tRsG1YcMGsa8uvH9effVVzXg024MvW75A+YDzvjtw4IAY48pLvgoVKogy2U7UanV/152kIBzr5gtgyJAh4jtfzg8fPhTXmPc6971w4YIYs9bNx3tcN42TU1QUeA+pJ0moTLBevDfLly+fpQ6cJOKLR/1c8R7id77o2NZ8gbAOFKa6+XgP8DrzBc4JEY7b8zvvcwpwXkfdcsq8M4Ts4EXhA07Ug7JvvfWWEBYcNOaNk10aadSokRA2aqi5qAf6WR41R846amskulCIxMfHZ6oDu8MUuHyo2WVSl03Byi23fOpBdn2/68K8fJi0z4HwgaWg4Q3KB1v9G7sY2sfRty/rx9/UkwNqQZjdTDj3Uwsr7XJ4M1NY8PjqmW+W3bt370x14DH4Alu8eLFm9lZ7kF1fObqwu8brrIbXkS8OCoodO3aI607hpy576NChmnyEA/9ciaDdruo6qCct+JLgDKVaQ9GFLy3t9uR+9HDCWUtuFDAUWtTm85KPQlndlvp+1wfvL87Wa59HkyZNhGZ8/PhxIeB5T+jLpy+NdVPXQT1JQksACi99wo9whlp7lpzl8CXE3sHly5dFO1No6cvHY/G5o7Dji1FdB/V10leOyWqAEolEkhfK7CSIRCKR5IYUgBKJxGSRAlAikZgsUgBKJBKTRQpAiURiskgBKJFITBYpACUSickiBaBEIjFZpACUSCQmixSAEokEpsr/AbqdQYdvxa6RAAAAAElFTkSuQmCC" alt="연간 수출·수입 추이 (2007–2025)">
+            <img src="data:image/png;base64,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" alt="2025년 수출 상위 10개국">
+          </div>
+          <div class="mono-links">
+            <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/chapters/chapter01/chapter01.md" target="_blank" rel="noopener">Read chapter</a>
+            <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/chapters/chapter01/chapter01.ipynb" target="_blank" rel="noopener">Notebook &amp; figures</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="mono-card placeholder">
+        <div class="mono-num">II</div>
+        <div class="mono-body">
+          <p class="mono-chlabel">Chapter 2</p>
+          <h3 class="mono-chtitle">주제 미정</h3>
+          <p class="mono-chsub">자리표시자 — 주제 확정 후 채워진다</p>
+          <p class="mono-desc">KCSDB2 위에서 가능한 또 다른 기술통계·분석 시연이 들어갈 자리다. 예: 수입 구조, 대륙·권역별 흐름, 특정 품목군의 시계열.</p>
+          <div class="mono-links"><a class="disabled">Read chapter</a><a class="disabled">Notebook</a></div>
+        </div>
+      </article>
+
+      <article class="mono-card placeholder">
+        <div class="mono-num">III</div>
+        <div class="mono-body">
+          <p class="mono-chlabel">Chapter 3</p>
+          <h3 class="mono-chtitle">주제 미정</h3>
+          <p class="mono-chsub">자리표시자 — 주제 확정 후 채워진다</p>
+          <p class="mono-desc">분석 방향은 아직 열려 있다. fact는 raw, dim은 참조·연결뿐이므로 어떤 분석도 같은 출발선에서 시작할 수 있다.</p>
+          <div class="mono-links"><a class="disabled">Read chapter</a><a class="disabled">Notebook</a></div>
+        </div>
+      </article>
+
+      <article class="mono-card placeholder">
+        <div class="mono-num">IV</div>
+        <div class="mono-body">
+          <p class="mono-chlabel">Chapter 4</p>
+          <h3 class="mono-chtitle">주제 미정</h3>
+          <p class="mono-chsub">자리표시자 — 주제 확정 후 채워진다</p>
+          <p class="mono-desc">이 카드는 주제가 정해지면 제목·요약·그림과 함께 문서·노트북 링크로 채워진다.</p>
+          <div class="mono-links"><a class="disabled">Read chapter</a><a class="disabled">Notebook</a></div>
+        </div>
+      </article>
+
+      <article class="mono-card placeholder">
+        <div class="mono-num">V</div>
+        <div class="mono-body">
+          <p class="mono-chlabel">Chapter 5</p>
+          <h3 class="mono-chtitle">주제 미정</h3>
+          <p class="mono-chsub">자리표시자 — 주제 확정 후 채워진다</p>
+          <p class="mono-desc">이 카드는 주제가 정해지면 제목·요약·그림과 함께 문서·노트북 링크로 채워진다.</p>
+          <div class="mono-links"><a class="disabled">Read chapter</a><a class="disabled">Notebook</a></div>
+        </div>
+      </article>
+
+      <article class="mono-card">
+        <div class="mono-num">VI</div>
+        <div class="mono-body">
+          <p class="mono-chlabel">Chapter 6</p>
+          <h3 class="mono-chtitle">데이터베이스 구축 과정</h3>
+          <p class="mono-chsub">원자료에서 검증된 DB까지의 전 과정</p>
+          <p class="mono-desc">이 DB를 처음부터 다시 만들고 공개하기까지 — 왜 만들었는지, 어떤 원칙으로 설계했는지, 데이터를 어떻게 쌓고 어떤 함정을 만났는지, 무엇을 검증하고 어떻게 배포했는지. 데이터베이스에 익숙하지 않은 독자도 읽도록 용어를 풀어 썼다.</p>
+          <ul class="mono-bullets">
+            <li>원본 XML 56,852개 → 파이프라인 6단계 → 통합 검증(PASS 9 / FAIL 0).</li>
+            <li>fact는 raw, 연결·참조는 dim — 특정 분석에 치우치지 않는 중립 설계.</li>
+            <li>함정(나미비아 NA·잠정월·다대다·폐지코드)을 고치지 않고 목록으로 보존.</li>
+          </ul>
+          <div class="mono-links">
+            <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/chapters/chapter06/chapter06.md" target="_blank" rel="noopener">Read chapter</a>
+          </div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span class="ver">v1.0-202603 기준</span>
+    <p><b>출처 표시 (공공누리 제1유형).</b> 관세청 HS부호(data.go.kr, 15049722) 및 관세청 FTA 포털 HS연계표는 공공누리 제1유형(출처표시)으로 개방된 저작물이다. 외교부 국가표준코드(15091117), 관세청 품목별 국가별 수출입실적(GW)(15100475)을 함께 이용하였다.</p>
+    <p>본 저작물은 위 기관들이 개방한 공공데이터를 이용하였으며, 공공기관이 이 DB를 후원하거나 특수 관계에 있는 것으로 오인하게 하는 표시를 하지 않는다.</p>
+  </div>
+</footer>
+
+<script>
+  var TABS = ["overview","build","traps","use","research"];
+  function showTab(name){
+    TABS.forEach(function(t){
+      var btn = document.getElementById("t-"+t);
+      var panel = document.getElementById("tab-"+t);
+      var on = (t === name);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
+      panel.classList.toggle("active", on);
+    });
+    if (window.scrollY > 0) window.scrollTo({top:0, behavior:"instant" in document.documentElement.style ? "auto" : "auto"});
+  }
+  TABS.forEach(function(t){
+    document.getElementById("t-"+t).addEventListener("click", function(){ showTab(t); });
+  });
+</script>

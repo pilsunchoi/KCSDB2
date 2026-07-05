@@ -9,3 +9,6 @@ config/api_key.env
 __pycache__/
 *.pyc
 .venv/
+
+# 로컬 에디터/도구 설정
+.claude/
