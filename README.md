@@ -25,6 +25,7 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 ## 파일별 설명
 
 ### scripts/
+
 | 파일 | 설명 |
 |------|------|
 | 00_probe_update.py | 업데이트 시작점 판정. 로컬 raw 최신월 실측 + 대형국 프로브로 관세청 확정월 탐지(품목명세 유무로 잠정월 구분) |
@@ -36,6 +37,7 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | benchmark_queries.py | (진단 도구) 분석 쿼리 4종 성능 측정. 순수 연산시간(EXPLAIN ANALYZE) vs 결과 전송시간 분리. 데이터 갱신 시 재측정용 |
 
 ### docs/
+
 | 파일 | 설명 |
 |------|------|
 | DB_구축_원칙.md | 재구축 설계 헌법. fact raw 원칙, dim 구조, HS6 연결 방침, 계층 분리, 검증 기준 |
@@ -43,6 +45,7 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 후속세션_업로드_안내.md | 다음 세션에서 무엇을 올릴지 목적별 안내. DB 실물(676MB)은 업로드 불가, 로컬 쿼리 결과로 우회 |
 
 ### data/external/ (외부 참조자료)
+
 | 파일 | 설명 |
 |------|------|
 | 관세청_HS부호_20260101.xlsx | HS10 품목명·단위·발효일. dim_hs10 원천. 2026 유효코드만(폐지코드 없음) |
@@ -52,6 +55,7 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | HS연계표_2022to2017.pdf | HS6 개정 연계(2022↔2017). 5,937쌍. deleted 1건(300219) 포함 |
 
 ### 루트
+
 | 파일 | 설명 |
 |------|------|
 | requirements.txt | 재구축·수집·프로브 의존성 9종(Python 3.12: duckdb, pandas, pyarrow, openpyxl, pdfplumber, requests, python-dotenv, pyyaml, tqdm) |
