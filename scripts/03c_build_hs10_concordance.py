@@ -21,8 +21,8 @@
 출력: data/processed/kcsdb.duckdb 의 dim_hs10_concordance, dim_hs10_to_2022
 
 실측 (2026-08-28):
-  dim_hs10_concordance 50,899행 (2012 16,428 / 2017 16,709 / 2022 17,762)
-  dim_hs10_to_2022     75,754행 (chain 66,997 / hs6_fallback 8,757)
+  dim_hs10_concordance 50,864행 (2012 16,404 / 2017 16,699 / 2022 17,761)
+  dim_hs10_to_2022     75,719행 (chain 66,962 / hs6_fallback 8,757)
   대각선 보존율(개정 / 위약): 2012 96.84/99.88, 2017 93.00/99.32, 2022 85.67/97.94
 
 실행:
@@ -35,15 +35,16 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
-from collections import Counter
 from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
 
 import duckdb
-import fitz
 import numpy as np
 import pandas as pd
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from utils import byeolpyo  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 BYEOLPYO_DIR = PROJECT_ROOT / "data" / "external" / "HSK_별표"
@@ -79,116 +80,11 @@ ITERS = 400     # IPF 반복
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 1. 별표 PDF 파싱
+# 1. 별표 PDF 파싱 (scripts/utils/byeolpyo.py 공유)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _is_hangul(s: str) -> bool:
-    return any("가" <= ch <= "힣" for ch in s)
-
-
-def column_anchors(doc, sample: int = 60) -> list[float]:
-    """HS4·소호·8자리·10자리·국문·영문 여섯 열의 시작 x좌표.
-
-    낱말의 성격(숫자 / 한글 / 로마자)으로 갈라 각 무리의 최빈 x를 쓴다. 영문 열을
-    국문 열 안쪽 좌표와 헷갈리지 않게 하려는 것이다.
-    """
-    dig: Counter = Counter()
-    ko: Counter = Counter()
-    en: Counter = Counter()
-    step = max(1, len(doc) // sample)
-    for i in range(0, len(doc), step):
-        for w in doc[i].get_text("words"):
-            x, t = round(w[0], 1), w[4]
-            if t.isdigit():
-                dig[x] += 1
-            elif _is_hangul(t):
-                ko[x] += 1
-            elif t.isascii() and any(ch.isalpha() for ch in t):
-                en[x] += 1
-    kx = ko.most_common(1)[0][0]
-    ex = max((x for x, _ in en.most_common(8) if x > kx), key=lambda x: en[x])
-    codes = sorted(x for x, _ in dig.most_common(20) if x < kx - 5)
-    anchors: list[float] = []
-    for x in codes:
-        if not anchors or x - anchors[-1] > 8:
-            anchors.append(x)
-    if len(anchors) != 4:
-        raise RuntimeError(f"코드 열 4개를 못 찾음: {anchors}")
-    return anchors + [kx, ex]
-
-
-def parse_page(page, anch: list[float]) -> list[dict]:
-    c0, c1, c2, c3, kx, ex = anch
-    tol = 3.0
-    lines: dict[float, list[tuple[float, str]]] = {}
-    for x0, y0, _x1, _y1, txt, *_ in page.get_text("words"):
-        key = round(y0, 1)
-        for k in lines:
-            if abs(k - key) <= 1.5:
-                key = k
-                break
-        lines.setdefault(key, []).append((x0, txt))
-
-    # 코드 열은 판본마다 몇 pt씩 흔들린다. 고정 허용오차 대신 이웃 열의 중간점을
-    # 경계로 삼아 가장 가까운 열에 배정한다.
-    bnd = [(c0 + c1) / 2, (c1 + c2) / 2, (c2 + c3) / 2, kx - 4]
-    recs: list[dict] = []
-    cur: dict | None = None
-    for y in sorted(lines):
-        ws = sorted(lines[y])
-        if any(c0 - 6 < x < bnd[0] for x, _ in ws):
-            frag = ["", "", "", ""]
-            for x, t in ws:
-                if not t.isdigit() or x >= bnd[3] or x < c0 - 6:
-                    continue
-                frag[next(k for k in range(4) if x < bnd[k])] = t
-            cur = {"frag": frag, "ko": [], "en": []}
-            recs.append(cur)
-        if cur is None:
-            continue
-        for x, t in ws:
-            if kx - tol <= x < ex - tol:
-                cur["ko"].append(t)
-            elif x >= ex - tol:
-                cur["en"].append(t)
-    return recs
-
-
 def read_byeolpyo(year: str) -> pd.DataFrame:
-    """별표 PDF → HS10마다 (코드, 잎 품명, 계층 경로 품명, 영문명)."""
-    doc = fitz.open(BYEOLPYO_DIR / f"HSK_별표_{year}.pdf")
-    anch = column_anchors(doc)
-    recs: list[dict] = []
-    for page in doc:
-        recs += parse_page(page, anch)
-
-    stack: dict[int, tuple[str, str]] = {}
-    rows = []
-    for r in recs:
-        # PDF에 찍힌 자릿수를 그대로 잇는다. HSK에는 7·9자리 중간 계층이 있어
-        # 0을 채워 넣으면 '9'(9자리 표제)와 '09'(10자리)가 뒤섞인다.
-        parts = []
-        for f in r["frag"]:
-            if not f:
-                break
-            parts.append(f)
-        code = "".join(parts)
-        if not code:
-            continue
-        ko = " ".join(r["ko"]).strip()
-        n = len(code)
-        stack = {k: v for k, v in stack.items() if k < n and code.startswith(v[0])}
-        stack[n] = (code, ko)
-        if n == 10:
-            rows.append(
-                {
-                    "code": code,
-                    "leaf": ko,
-                    "path": " ".join(stack[k][1] for k in sorted(stack)),
-                    "name_en": " ".join(r["en"]).strip(),
-                }
-            )
-    df = pd.DataFrame(rows).drop_duplicates("code")
+    df = byeolpyo.read(BYEOLPYO_DIR / f"HSK_별표_{year}.pdf")
     logger.info(f"  별표 {year}: HS10 {len(df):,}개")
     return df
 
