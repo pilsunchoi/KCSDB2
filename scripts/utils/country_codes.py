@@ -74,7 +74,7 @@ def get_iso2_list(csv_path: Path) -> list[str]:
 if __name__ == "__main__":
     # 단독 실행 시 검증
     PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-    csv_path = PROJECT_ROOT / "data" / "external" / "country_codes_mofa_20251222.csv"
+    csv_path = PROJECT_ROOT / "data" / "external" / "외교부_국가표준코드_20251222.csv"
 
     df = load_mofa_country_codes(csv_path)
     print(f"Loaded {len(df)} rows")

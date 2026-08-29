@@ -65,7 +65,7 @@ LOG_DIR.mkdir(exist_ok=True)
 
 ENV_PATH = PROJECT_ROOT / "config" / "api_key.env"
 SETTINGS_PATH = PROJECT_ROOT / "config" / "settings.yaml"
-COUNTRY_CSV = PROJECT_ROOT / "data" / "external" / "country_codes_mofa_20251222.csv"
+COUNTRY_CSV = PROJECT_ROOT / "data" / "external" / "외교부_국가표준코드_20251222.csv"
 
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 RAW_DIR.mkdir(parents=True, exist_ok=True)
@@ -178,8 +178,17 @@ def generate_pairs(
     year_from: int,
     year_to: int,
     iso2_list: list[str],
+    ym_from: str | None = None,
+    ym_to: str | None = None,
 ) -> list[tuple[str, str]]:
-    """(YYYYMM, ISO2) 페어 전체 생성."""
+    """(YYYYMM, ISO2) 페어 전체 생성.
+
+    ym_from·ym_to로 월 단위 상한을 둘 수 있다. **미확정월을 받지 않기 위한 것이다.**
+    관세청 확정치가 아직 없는 달을 호출하면 rc=00에 품목명세 0건인 응답이 오는데,
+    이것이 raw로 저장되고 success로 기록되면 그 달은 영구히 빈 채로 굳는다. 나중에
+    확정치가 올라와도 skip 판정에 걸려 다시 받지 않기 때문이다. 실제로 2026년 4·5월이
+    이렇게 비었다. 00_probe_update.py가 알려 주는 확정 상한을 ym_to에 넣는다.
+    """
     pairs = []
     today = date.today()
     for year in range(year_from, year_to + 1):
@@ -188,6 +197,10 @@ def generate_pairs(
             if (year, month) > (today.year, today.month):
                 continue
             yyyymm = f"{year:04d}{month:02d}"
+            if ym_from and yyyymm < ym_from:
+                continue
+            if ym_to and yyyymm > ym_to:
+                continue
             for cc in iso2_list:
                 pairs.append((yyyymm, cc))
     return pairs
@@ -200,6 +213,10 @@ def generate_pairs(
 def main():
     parser = argparse.ArgumentParser(description="관세청 무역통계 본격 수집")
     parser.add_argument("--year-from", type=int, default=2010)
+    parser.add_argument("--ym-from", type=str, default=None,
+                        help="시작 월 YYYYMM (선택)")
+    parser.add_argument("--ym-to", type=str, default=None,
+                        help="끝 월 YYYYMM. 미확정월을 받지 않도록 확정 상한을 넣는다")
     parser.add_argument("--year-to", type=int, default=2026)
     parser.add_argument(
         "--max-calls", type=int, default=9500,
@@ -234,7 +251,8 @@ def main():
     logger.info(f"국가 코드 {len(iso2_list)}개 로드")
 
     # 페어 생성
-    pairs = generate_pairs(args.year_from, args.year_to, iso2_list)
+    pairs = generate_pairs(args.year_from, args.year_to, iso2_list,
+                           args.ym_from, args.ym_to)
     logger.info(f"전체 페어: {len(pairs):,} (= {args.year_from}~{args.year_to})")
 
     # 진행 상황 분류: skip vs todo
