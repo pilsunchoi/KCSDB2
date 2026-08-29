@@ -195,17 +195,19 @@
     <p class="sub">이 DB가 무엇을 담고, 어떤 설계 원칙 위에 서 있는지.</p>
 
     <div class="panel">
-      <p><b>무엇인가.</b> 관세청 무역통계 원본(품목별 국가별 월 실적 2007.01–2026.03, 수출 10대 품목 10일 단위 잠정치 2016.01–현재)을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다.</p>
+      <p><b>무엇인가.</b> 관세청 무역통계 원본(품목별 국가별 월 실적, 그리고 수출 10대 품목 10일 단위 잠정치)을 2007년부터 최신 확정월까지 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다.</p>
       <p><b>왜 만들었나.</b> 관세청 OpenAPI는 조회 조건을 나누어 받아야 하고, 개발계정 기준 하루 1만 회의 호출 한도가 있다. 이 DB를 채우는 데도 엿새에 걸쳐 5만 6천여 회를 호출했고 원응답은 7.6GB였다. 여기에 중간에 세 번(2012·2017·2022) 바뀐 HS 품목코드를 이어 붙이는 작업이 더해진다. 6자리 연결은 관세청 공식 연계표로, 10자리 연결은 기재부 고시 별표에서 직접 만들어 넣었다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭). 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
       <p><b>누구를 위한 것인가.</b> 무역 데이터를 받아 직접 분석하려는 연구자가 주 독자다. 로컬 주피터 노트북에서 읽어 쓰는 것을 전제로 한다. 받아서 쓰는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭에 있다.</p>
     </div>
 
+<!-- DB_STATUS:START -->
     <div class="stats">
-      <div class="stat"><div class="n">27,533,937</div><div class="k">fact_trade 거래행</div></div>
-      <div class="stat"><div class="n">2007.01–2026.03</div><div class="k">데이터 범위 (231개월)</div></div>
+      <div class="stat"><div class="n">28,093,109</div><div class="k">fact_trade 거래행</div></div>
+      <div class="stat"><div class="n">2007.01–2026.07</div><div class="k">월 실적 범위 (235개월)</div></div>
       <div class="stat"><div class="n">240</div><div class="k">국가 (stat_cd)</div></div>
-      <div class="stat"><div class="n">15,403</div><div class="k">HS10 품목 종수</div></div>
+      <div class="stat"><div class="n">15,406</div><div class="k">HS10 품목 종수</div></div>
     </div>
+<!-- DB_STATUS:END -->
 
     <h3>설계 원칙 세 문장</h3>
     <p>이 DB의 모든 결정은 하나의 최상위 원칙에서 나온다 — <b>DB는 관세청 원본을 최대한 그대로 담고, 분석을 위한 가공은 DB가 아니라 분석 계층에서 한다.</b> 이 원칙을 세 문장으로 압축하면 다음과 같다.</p>
@@ -219,7 +221,7 @@
       <a class="btn primary" href="https://github.com/pilsunchoi/KCSDB2" target="_blank" rel="noopener">GitHub 저장소</a>
       <a class="btn" href="https://github.com/pilsunchoi/KCSDB2/releases" target="_blank" rel="noopener">Releases (DB 내려받기)</a>
     </div>
-    <p class="sub" style="margin-top:6px">DB 실물(<code>kcsdb.duckdb</code>, 약 681MB)은 저장소가 아니라 Releases 첨부로 배포된다. 받는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭 참조.</p>
+    <p class="sub" style="margin-top:6px">DB 실물(<code>kcsdb.duckdb</code>)은 저장소가 아니라 Releases 첨부로 배포된다. 받는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭 참조.</p>
   </section>
 
   <!-- ============ DB 구축 ============ -->
@@ -315,7 +317,7 @@
     <h3>HS 개정 연결</h3>
     <div class="panel">
       <p><b>무엇이 문제인가.</b> HS 품목코드는 국제 협약에 따라 5년마다 개정된다(이 데이터 기간에는 2007·2012·2017·2022 네 판본이 걸쳐 있다). 개정 때 코드가 신설·폐지·통합·분할되기 때문에, <b>같은 상품인데도 연도에 따라 코드가 달라진다.</b> 코드가 같은지만 보고 시계열을 이으면, 개정으로 코드가 바뀐 품목은 도중에 끊기거나 엉뚱하게 이어진다. 이 끊김을 메우는 것이 <code>dim_hs6_concordance</code>(6자리)와 <code>dim_hs10_to_2022</code>(10자리) 테이블이다. 아래는 6자리 연결의 요지이고, 두 층위를 함께 다룬 자세한 기록은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭에 있다.</p>
-      <p><b>개정 시점.</b> 각 판본은 개정 연도 1월 1일부터 적용된다. 이 데이터(2007.01–2026.03)에 걸친 네 판본의 적용 구간은 다음과 같다.</p>
+      <p><b>개정 시점.</b> 각 판본은 개정 연도 1월 1일부터 적용된다. 이 데이터에 걸친 네 판본의 적용 구간은 다음과 같다.</p>
       <div class="tblwrap">
         <table>
           <caption>HS 판본별 적용 구간</caption>
@@ -324,7 +326,7 @@
             <tr><td>HS2007</td><td>2007.01</td><td>2007.01 – 2011.12</td></tr>
             <tr><td>HS2012</td><td>2012.01</td><td>2012.01 – 2016.12</td></tr>
             <tr><td>HS2017</td><td>2017.01</td><td>2017.01 – 2021.12</td></tr>
-            <tr><td>HS2022</td><td>2022.01</td><td>2022.01 – 2026.03 (데이터 끝)</td></tr>
+            <tr><td>HS2022</td><td>2022.01</td><td>2022.01 – 데이터 끝</td></tr>
           </tbody>
         </table>
       </div>
@@ -356,13 +358,15 @@
     </div>
 
     <h3>커버리지</h3>
-    <p>커버리지는 "fact의 코드가 dim에서 얼마나 이름·연결을 얻는가"를 나타내는 지표다. 국가는 240개 모두 매칭되고, 기간도 231개월이 빠짐없이 이어진다. 다만 품목코드는 100%가 아니다 — 그 이유와 실제 영향은 아래에서 설명한다.</p>
+    <p>커버리지는 "fact의 코드가 dim에서 얼마나 이름·연결을 얻는가"를 나타내는 지표다. 국가는 전부 매칭되고, 기간도 빠짐없이 이어진다. 다만 품목코드는 100%가 아니다 — 그 이유와 실제 영향은 아래에서 설명한다.</p>
+<!-- DB_COVERAGE:START -->
     <div class="stats">
-      <div class="stat"><div class="n">231개월</div><div class="k">2007.01–2026.03 연속(빠짐 없음)</div></div>
+      <div class="stat"><div class="n">235개월</div><div class="k">2007.01–2026.07 연속(빠짐 없음)</div></div>
       <div class="stat"><div class="n">240 / 240</div><div class="k">국가 dim 매칭 (미매칭 0)</div></div>
-      <div class="stat"><div class="n">15,403종</div><div class="k">HS10 (fact 등장)</div></div>
-      <div class="stat"><div class="n">72.8%</div><div class="k">hs10 → dim_hs10 (11,209/15,403)</div></div>
+      <div class="stat"><div class="n">15,406종</div><div class="k">HS10 (fact 등장)</div></div>
+      <div class="stat"><div class="n">72.8%</div><div class="k">hs10 → dim_hs10 (11,212/15,406)</div></div>
     </div>
+<!-- DB_COVERAGE:END -->
     <div class="tblwrap">
       <table>
         <caption>concordance 커버리지 (fact hs6 → hs_past 매칭, 종수 기준)</caption>
@@ -386,7 +390,7 @@
       <span class="pill info">INFO 1</span>
       <span class="pill fail">FAIL 0</span>
     </div>
-    <p><b>PASS</b>는 통과, <b>FAIL</b>은 반드시 고쳐야 할 무결성 위반, <b>WARN</b>은 주의가 필요하나 결함은 아닌 항목, <b>INFO</b>는 참고 사항이다. <b>FAIL이 0</b>이라는 것이 가장 중요하다 — 무결성 위반이 하나도 없다는 뜻이다. WARN 4는 전부 원자료(관세청 공개자료) 자체의 한계(품목 커버리지 등)이지 DB가 잘못 만들어진 것이 아니다. INFO 1은 음수 중량 19행(관세청의 사후 정정 원본이므로 보존). 참고로 bal_payments 항등식은 2,753만 행 전체에서 위반 0으로 통과했다.</p>
+    <p><b>PASS</b>는 통과, <b>FAIL</b>은 반드시 고쳐야 할 무결성 위반, <b>WARN</b>은 주의가 필요하나 결함은 아닌 항목, <b>INFO</b>는 참고 사항이다. <b>FAIL이 0</b>이라는 것이 가장 중요하다 — 무결성 위반이 하나도 없다는 뜻이다. WARN 4는 전부 원자료(관세청 공개자료) 자체의 한계(품목 커버리지 등)이지 DB가 잘못 만들어진 것이 아니다. INFO 1은 음수 중량 19행(관세청의 사후 정정 원본이므로 보존). 참고로 bal_payments 항등식은 거래 행 전체에서 위반 0으로 통과했다.</p>
   </section>
 
   <!-- ============ HS 연계 ============ -->
@@ -421,7 +425,7 @@
           <tr><td>구축</td><td>2026-07</td><td>2026-08</td></tr>
           <tr><td>행수</td><td>18,944</td><td>50,864 + 75,719</td></tr>
           <tr><td>가중치</td><td>없음(다대다 관계만 보존)</td><td>있음(출발 코드별 합 1)</td></tr>
-          <tr><td>품목 구분 수</td><td>6,090</td><td>15,403</td></tr>
+          <tr><td>품목 구분 수</td><td>6천여</td><td>1만 5천여</td></tr>
           <tr><td>쓸 곳</td><td>수출 변동 분해, 마진 분해 등 표준 해상도 분석</td><td>개별 품목 추적, 개수 기반 지표, 조기 탐지</td></tr>
         </tbody>
       </table>
@@ -610,7 +614,7 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
       <div class="trap">
         <div class="tref">폐지코드 · §2.1</div>
         <h4>hs10 폐지코드 품목명 NULL (72.8%)</h4>
-        <p>fact hs10 15,403종 중 4,194종(27.2%)이 2026 HS부호 스냅샷에 없는 폐지코드라 dim_hs10 품목명이 NULL("정직한 NULL"). HS6 이하 해상도 분석은 hs6 절단으로 소거돼 무영향. HS10 세분 품목명을 쓰는 분석에서만 제약. <b>2026-08 해결:</b> 확보 경로는 data.go.kr이 아니라 국가법령정보센터의 연도별 HSK 별표였다. 4,194종 중 3,738종(89.1%, 폐지코드 거래액의 94.1%)의 국·영문 품명을 되찾아 <code>dim_hs10_name_hist</code>로 적재했다. <code>dim_hs10</code>은 그대로 두었다 — 품명이 판본에 따라 변해(31.5%) 키가 hs10 하나인 표에 열로 넣을 수 없다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭).</p>
+        <p>fact에 등장하는 hs10의 27.2%가 2026 HS부호 스냅샷에 없는 폐지코드라 dim_hs10 품목명이 NULL("정직한 NULL"). HS6 이하 해상도 분석은 hs6 절단으로 소거돼 무영향. HS10 세분 품목명을 쓰는 분석에서만 제약. <b>2026-08 해결:</b> 확보 경로는 data.go.kr이 아니라 국가법령정보센터의 연도별 HSK 별표였다. 4,194종 중 3,738종(89.1%, 폐지코드 거래액의 94.1%)의 국·영문 품명을 되찾아 <code>dim_hs10_name_hist</code>로 적재했다. <code>dim_hs10</code>은 그대로 두었다 — 품명이 판본에 따라 변해(31.5%) 키가 hs10 하나인 표에 열로 넣을 수 없다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭).</p>
       </div>
     </div>
 
@@ -680,7 +684,7 @@ con.close()</code></pre>
   <section role="tabpanel" id="tab-research" aria-labelledby="t-research">
     <div class="mono">
       <h2 class="h">연구</h2>
-      <p class="sub">관세청 무역통계 DB(2007–2026, 2,753만 건) 위에서 수행하는 분석 챕터. 각 챕터는 렌더된 문서(Markdown·표·그림)와 그 결과를 재현하는 노트북으로 연결된다.</p>
+      <p class="sub">관세청 무역통계 DB 위에서 수행하는 분석 챕터. 각 챕터는 렌더된 문서(Markdown·표·그림)와 그 결과를 재현하는 노트북으로 연결된다.</p>
       <div class="note">여섯 챕터 모두 이 DB 위에서 수행한 실제 분석이다. 시연은 방법 예시이지 분석 방향(연구 결론)이 아니다 — 이 DB는 특정 분석을 전제하지 않는다.</div>
 
       <article class="mono-card">
