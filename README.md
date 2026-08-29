@@ -9,10 +9,10 @@
 - 10일 단위 잠정치: 2016.01–2026.08, 10대 품목 + 총수출
 - DB 파일: 약 713MB
 <!-- DB_STATUS:END -->
-
-*위 수치는 `python scripts/06_db_status.py`가 DB를 읽어 자동으로 채운다. 손으로 고치지 않는다.*
 - 설계 원칙: fact는 관세청 raw만. 파생·연결·참조는 전부 dim. 상세는 docs/DB_구축_원칙.md
 - 검증: 04_validate PASS 9, WARN 4, INFO 1, FAIL 0 (최근 실행 2026-08-29). WARN은 설계상 예상된 불완전이고 FAIL이 0인 것이 요점이다
+
+*위 수치는 `python scripts/06_db_status.py`가 DB를 읽어 자동으로 채운다. 손으로 고치지 않는다.*
 
 ---
 
@@ -46,6 +46,7 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 03d_build_hs10_name_hist.py | HS10 품명 이력 → dim_hs10_name_hist. 폐지코드 품목명(dim_hs10의 NULL)을 기재부 고시 별표에서 되찾는다 |
 | 03e_build_nqi.py | 신성질별 분류 → dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10. HS 개정에 흔들리지 않는 공식 분류로 계열을 잇는다. 과거 코드는 dim_hs10_to_2022로 이어 붙이므로 03c 이후 실행 |
 | 03f_build_workday.py | 상순·중순·하순 조업일수 → dim_workday10d. KASI 검증 공휴일 달력 사용. 10일 단위 자료를 견주려면 반드시 필요하다 |
+| 03g_fetch_holidays.py | 공휴일 달력을 KASI 특일정보 API에서 받아 늘린다. `isHoliday='Y'`만 받고(24절기 등 쉬지 않는 날 제외), 기존 날짜는 건드리지 않고 없는 기간만 덧붙인다. **03f보다 먼저 실행한다** — 달력이 끝나는 지점부터는 조업일수를 낼 수 없다 |
 | 05_fetch_exp10d.py | 수출 10대 품목 10일 단위 잠정치 수집 → fact_exp10d, v_exp10d_seg. 값이 바뀔 때만 새 행을 쌓아 개정 이력을 남긴다(vintage) |
 | utils/api_client.py | 관세청 OpenAPI 호출 래퍼. 00·01 공유. 재시도·오류코드 판정 |
 | utils/country_codes.py | 외교부 국가표준코드 CSV 로더. 00·01·03 공유 |
@@ -71,7 +72,7 @@ DB 실물과 마찬가지로, 용량이 큰 원천 자료 일부는 저장소에
 | 관세청_HS부호_20260101.xlsx | HS10 품목명·단위·발효일. dim_hs10 원천. 2026 유효코드만(폐지코드 없음) |
 | 외교부_국가표준코드_20251222.csv | ISO2/3·영문명·한글명·대륙 3종. dim_country 참조. 나미비아 ISO2='NA' 주의 |
 | 관세청_HSK별_신성질별_20260101.xlsx | HSK 10단위에 신성질별·성질별 분류를 붙인 표. dim_nqi·dim_hs10_to_nqi·dim_hs10_to_major10 원천. 공공데이터포털 15049720, 신청 불요·연간 갱신. **시트 둘의 열 이름이 다르다** — 2026년 시트만 `HS10단위부호`가 `국제적 상품분류체계(HS)10단위부호`다 |
-| KASI_공휴일_2007_2026.csv | 한국천문연구원 특일정보로 전수 대조한 공휴일. dim_workday10d 원천. **2026년 3월에서 끝나므로** 그 뒤 기간을 계산하려면 KASI API로 늘려야 한다 |
+| KASI_공휴일.csv | 한국천문연구원 특일정보로 전수 대조한 공휴일. dim_workday10d 원천. 달력이 끝나는 지점부터는 조업일수를 낼 수 없으므로 `03g_fetch_holidays.py`로 미리 늘려 둔다 |
 | HS연계표_2022to2007.pdf | HS6 개정 연계(2022↔2007). 6,592쌍. concordance 원천 |
 | HS연계표_2022to2012.pdf | HS6 개정 연계(2022↔2012). 6,415쌍 |
 | HS연계표_2022to2017.pdf | HS6 개정 연계(2022↔2017). 5,937쌍. deleted 1건(300219) 포함 |
@@ -123,6 +124,7 @@ python scripts\03b_build_hs6_concordance.py  # dim_hs6_concordance
 python scripts\03c_build_hs10_concordance.py # dim_hs10_concordance, dim_hs10_to_2022
 python scripts\03d_build_hs10_name_hist.py   # dim_hs10_name_hist
 python scripts\03e_build_nqi.py              # dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10
+python scripts\03g_fetch_holidays.py --to 2027 # 공휴일 달력 연장 (03f보다 먼저)
 python scripts\03f_build_workday.py          # dim_workday10d
 python scripts\05_fetch_exp10d.py --full     # fact_exp10d, v_exp10d_seg (2016~)
 python scripts\04_validate.py                # 통합 검증

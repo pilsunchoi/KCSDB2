@@ -14,7 +14,7 @@
 
 자료
 ----
-data/external/KASI_공휴일_2007_2026.csv
+data/external/KASI_공휴일.csv
   한국천문연구원 특일정보 API로 전수 대조한 공휴일이다. workalendar 등으로 생성한 뒤
   한글날 2007~2012년 오포함 제거, 부처님오신날 2012·2023년 정정, 대체공휴일 24일
   추가를 거쳤다. 만드는 과정은 `analysis/한국 수출입 달력효과/calendar_effects.ipynb` §0.
@@ -42,7 +42,7 @@ import pandas as pd
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB = os.path.join(ROOT, "data", "processed", "kcsdb.duckdb")
-CAL = os.path.join(ROOT, "data", "external", "KASI_공휴일_2007_2026.csv")
+CAL = os.path.join(ROOT, "data", "external", "KASI_공휴일.csv")
 
 SEGMENTS = [(10, 1, 10, "상순"), (20, 11, 20, "중순"), (99, 21, 31, "하순")]
 START = "2007-01-01"
