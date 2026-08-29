@@ -36,8 +36,10 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 파일 | 설명 |
 |------|------|
 | 00_probe_update.py | 업데이트 시작점 판정. 로컬 raw 최신월 실측 + 대형국 프로브로 관세청 확정월 탐지(품목명세 유무로 잠정월 구분) |
+| 01_fetch_raw.py | 관세청 OpenAPI에서 (월 × 국가) 원본 XML 수집. 이미 받은 페어는 자동 skip. `--ym-from`·`--ym-to`로 월 범위를 제한한다 — **미확정월을 받으면 빈 응답이 성공으로 기록되어 그 달이 영구히 빈 채로 굳으므로**, 00이 알려 준 확정 상한을 반드시 넣는다 |
 | 02a_xml_to_parquet.py | raw XML → interim parquet 변환. 파생 컬럼 제거(raw 8필드만) + 관세청 국명 부산물 저장 |
-| 02b_parquet_to_duckdb.py | parquet → DuckDB 적재. 스키마 검증(파생 컬럼 차단), 잠정월 제거, 적재 무결성 검증 |
+| 02b_parquet_to_duckdb.py | parquet → DuckDB 적재. 스키마 검증(파생 컬럼 차단), 잠정월 제거, 적재 무결성 검증. **DB 파일을 지우고 새로 만든다** — 재구축 전용이고 평소 갱신에는 02c를 쓴다 |
+| 02c_reload_year.py | 해당 연도 fact 행만 교체. dim 열두 개와 fact_exp10d의 vintage 이력을 보존한 채 새 달을 더한다. 02b의 잠정월 제거 규칙을 그대로 따른다 |
 | 03_build_dims.py | dim_country(관세청 국명+외교부 참조 병기, 나미비아 NA 처리) + dim_hs10(HS부호 파일, 발효일 실측) |
 | 03b_build_hs6_concordance.py | HS6 개정 연계표 3종 PDF 추출 → dim_hs6_concordance. 다대다·폐지코드(deleted) 보존 |
 | 03c_build_hs10_concordance.py | HS10 개정 연계 추정 → dim_hs10_concordance, dim_hs10_to_2022. 연도별 HSK 별표 PDF 파싱 → HS6 연계표로 후보 제한 → 품명 유사도 사전가중 → 이중비례조정(IPF). 03b 이후 실행 |
@@ -45,8 +47,11 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 03e_build_nqi.py | 신성질별 분류 → dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10. HS 개정에 흔들리지 않는 공식 분류로 계열을 잇는다. 과거 코드는 dim_hs10_to_2022로 이어 붙이므로 03c 이후 실행 |
 | 03f_build_workday.py | 상순·중순·하순 조업일수 → dim_workday10d. KASI 검증 공휴일 달력 사용. 10일 단위 자료를 견주려면 반드시 필요하다 |
 | 05_fetch_exp10d.py | 수출 10대 품목 10일 단위 잠정치 수집 → fact_exp10d, v_exp10d_seg. 값이 바뀔 때만 새 행을 쌓아 개정 이력을 남긴다(vintage) |
+| utils/api_client.py | 관세청 OpenAPI 호출 래퍼. 00·01 공유. 재시도·오류코드 판정 |
+| utils/country_codes.py | 외교부 국가표준코드 CSV 로더. 00·01·03 공유 |
 | utils/byeolpyo.py | HSK 별표 PDF 파서. 03c·03d 공유. 열 좌표 복원·앞자리 0 보존·쪽번호 제거 |
 | 04_validate.py | 5계층 통합 검증(스키마/값/적재/dim/concordance). PASS·WARN·INFO·FAIL + 종료코드 |
+| 06_db_status.py | DB를 읽어 README·index.html의 현황 수치 구간을 다시 쓴다. 행수·범위·개월수 같은 값을 손으로 적지 않기 위한 것이다. 갱신 절차의 마지막에 돌린다 |
 | benchmark_queries.py | (진단 도구) 분석 쿼리 4종 성능 측정. 순수 연산시간(EXPLAIN ANALYZE) vs 결과 전송시간 분리. 데이터 갱신 시 재측정용 |
 
 ### docs/
@@ -85,21 +90,48 @@ DB 실물과 마찬가지로, 용량이 큰 원천 자료 일부는 저장소에
 
 전제: kcsdb 환경(Python 3.12) 활성화, data/raw·config·utils 배치 완료.
 
+**두 갈래를 구분한다.** 새 달을 더하는 것과 DB를 처음부터 만드는 것은 절차가 다르다.
+`02b`는 **DB 파일을 지우고 다시 만들기 때문에** 새 달 몇 개를 더하려고 쓰면 dim 테이블
+열두 개가 함께 사라진다. 더구나 `fact_exp10d`의 vintage 이력은 API가 현재 값만 주므로
+원리상 복구할 수 없다. 갱신에는 `02c`를 쓴다.
+
+### A. 새 달을 더할 때 (평소)
+
 ```
-python scripts\00_probe_update.py          # (선택) 신규 확정월 확인
-python scripts\01_fetch_raw.py ...          # (신규월 있을 때만) 수집. v1 자산
-python scripts\02a_xml_to_parquet.py        # XML → parquet
-python scripts\02b_parquet_to_duckdb.py     # parquet → DuckDB (fact, meta)
-python scripts\03_build_dims.py             # dim_country, dim_hs10
-python scripts\03b_build_hs6_concordance.py # dim_hs6_concordance
+python scripts\00_probe_update.py            # 관세청 확정월이 어디까지인지 확인
+python scripts\01_fetch_raw.py --year-from 2026 --year-to 2026 --ym-from 202608 --ym-to <확정상한>
+python scripts\02a_xml_to_parquet.py --year 2026 --force
+python scripts\02c_reload_year.py --year 2026 # 해당 연도 fact 행만 교체 (dim 보존)
+python scripts\05_fetch_exp10d.py             # 10일 단위 잠정치 갱신
+python scripts\04_validate.py                 # 통합 검증
+python scripts\06_db_status.py                # 문서의 현황 수치 자동 갱신
+```
+
+`--ym-to`에 00이 알려 준 확정 상한을 넣는다. **미확정월을 받으면 빈 응답이 성공으로
+기록되어 그 달이 영구히 빈 채로 굳는다.** 나중에 확정치가 올라와도 다시 받지 않는다.
+
+dim은 다시 만들지 않는다. 국가·품목명은 외부 파일, HS 연계표는 별표 PDF, 조업일수는
+KASI 달력에서 오므로 거래 행이 늘어난다고 달라질 것이 없다.
+
+### B. 처음부터 만들 때 (재구축·스키마 변경)
+
+```
+python scripts\02a_xml_to_parquet.py         # XML → parquet (전 연도)
+python scripts\02b_parquet_to_duckdb.py      # parquet → DuckDB. DB 파일을 새로 만든다
+python scripts\03_build_dims.py              # dim_country, dim_hs10
+python scripts\03b_build_hs6_concordance.py  # dim_hs6_concordance
 python scripts\03c_build_hs10_concordance.py # dim_hs10_concordance, dim_hs10_to_2022
-python scripts\03d_build_hs10_name_hist.py  # dim_hs10_name_hist
-python scripts\03e_build_nqi.py             # dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10
-python scripts\03f_build_workday.py         # dim_workday10d
-python scripts\05_fetch_exp10d.py --full    # fact_exp10d, v_exp10d_seg (2016~)
-python scripts\04_validate.py               # 통합 검증
-python scripts\benchmark_queries.py         # (선택) 쿼리 성능 측정. 데이터 갱신 시 재확인
+python scripts\03d_build_hs10_name_hist.py   # dim_hs10_name_hist
+python scripts\03e_build_nqi.py              # dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10
+python scripts\03f_build_workday.py          # dim_workday10d
+python scripts\05_fetch_exp10d.py --full     # fact_exp10d, v_exp10d_seg (2016~)
+python scripts\04_validate.py                # 통합 검증
+python scripts\06_db_status.py               # 문서의 현황 수치 자동 갱신
+python scripts\benchmark_queries.py          # (선택) 쿼리 성능 측정
 ```
+
+03c는 별표 PDF를 파싱하고 IPF를 돌려 무겁다. 그리고 `fact_exp10d`에 vintage가 쌓여
+있다면 **02b를 돌리기 전에 parquet로 빼 두었다가 되돌려야 한다.**
 
 ---
 
