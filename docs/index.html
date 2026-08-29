@@ -195,7 +195,7 @@
     <p class="sub">이 DB가 무엇을 담고, 어떤 설계 원칙 위에 서 있는지.</p>
 
     <div class="panel">
-      <p><b>무엇인가.</b> 관세청 무역통계 원본(2007.01–2026.03)을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다.</p>
+      <p><b>무엇인가.</b> 관세청 무역통계 원본(품목별 국가별 월 실적 2007.01–2026.03, 수출 10대 품목 10일 단위 잠정치 2016.01–현재)을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다.</p>
       <p><b>왜 만들었나.</b> 관세청 OpenAPI는 조회 조건을 나누어 받아야 하고, 개발계정 기준 하루 1만 회의 호출 한도가 있다. 이 DB를 채우는 데도 엿새에 걸쳐 5만 6천여 회를 호출했고 원응답은 7.6GB였다. 여기에 중간에 세 번(2012·2017·2022) 바뀐 HS 품목코드를 이어 붙이는 작업이 더해진다. 6자리 연결은 관세청 공식 연계표로, 10자리 연결은 기재부 고시 별표에서 직접 만들어 넣었다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭). 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
       <p><b>누구를 위한 것인가.</b> 무역 데이터를 받아 직접 분석하려는 연구자가 주 독자다. 로컬 주피터 노트북에서 읽어 쓰는 것을 전제로 한다. 받아서 쓰는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭에 있다.</p>
     </div>
@@ -235,8 +235,8 @@
         <table>
           <thead><tr><th>DB 계층 (이 DB의 책임)</th><th>분석 계층 (DB 밖, 별도 스크립트)</th></tr></thead>
           <tbody>
-            <tr><td>raw 적재 (fact_trade, fact_total)</td><td>HS10→HS6 절단 <code>SUBSTR(hs10,1,6)</code></td></tr>
-            <tr><td>참조·연결 (dim_country, dim_hs10, dim_hs6_concordance, dim_hs10_concordance, dim_hs10_to_2022, dim_hs10_name_hist)</td><td>단가(금액/중량) 계산, wgt=0 처리</td></tr>
+            <tr><td>raw 적재 (fact_trade, fact_total, fact_exp10d)</td><td>HS10→HS6 절단 <code>SUBSTR(hs10,1,6)</code></td></tr>
+            <tr><td>참조·연결 (dim_country, dim_hs10, HS 연계 3종, dim_hs10_name_hist, 분류 3종, dim_workday10d)</td><td>단가(금액/중량) 계산, wgt=0 처리</td></tr>
             <tr><td>내부 무결성 검증</td><td>margin 분해 · granularity · 위기더미 등</td></tr>
           </tbody>
         </table>
@@ -245,7 +245,7 @@
     </div>
 
     <h3>fact 스키마 (관세청 raw)</h3>
-    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. 두 종류가 있다. <code>fact_trade</code>는 <b>국가 × HS10 품목 × 월</b> 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 <b>국가 × 월</b>로 합산된 총계 행이다. 둘 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
+    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. 세 종류가 있다. <code>fact_trade</code>는 <b>국가 × HS10 품목 × 월</b> 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 <b>국가 × 월</b>로 합산된 총계 행이다. 셋째 <code>fact_exp10d</code>는 다른 API에서 오는 <b>10대 수출품목 × 10일 단위</b> 잠정치로, 월 자료보다 훨씬 빠른 대신 국가도 중량도 없다. 셋 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
     <div class="tblwrap">
       <table>
         <caption>fact_trade — 거래 행 (국가 × HS10 × 월), 8필드</caption>
@@ -277,6 +277,10 @@
     </div>
     <p class="sub">fact_total 56,133행. 총계 행은 응답에 국가코드가 없어 stat_cd를 파일명에서 추출한다 — 이것이 DB 전체에서 유일하게 허용하는 파생이다.</p>
 
+    <p>세 번째 fact는 성격이 다르다. <code>fact_exp10d</code>는 관세청이 상순분을 11일, 중순분을 21일, 월 전체를 익월 1일에 내는 <b>10대 수출품목 잠정치</b>다(2016.01부터). 월 자료가 나오기 전에 방향을 읽을 수 있다는 것이 값어치이고, 대신 국가 구분과 중량이 없어 품목별 금액만 볼 수 있다. 값은 <b>누적치</b>(1~10일, 1~20일, 1~말일)이고 단위는 천 달러이며, 원본 그대로 담는다. 구간 증분과 억 달러 환산은 뷰 <code>v_exp10d_seg</code>가 맡는다.</p>
+
+    <p class="sub">fact_exp10d 4,213행. 이 자료는 <b>같은 시점을 여러 번 관측한다</b> — 당월은 잠정이고 전월까지는 신고 정정·취하를 반영해 갱신되기 때문이다. 그래서 값이 바뀔 때마다 새 행을 쌓고 <code>fetched_at</code>으로 구분한다. 나중에 "그때 알 수 있었던 값"으로 예측 성능을 정직하게 재려면 이 이력이 있어야 한다. 값이 그대로면 행을 만들지 않는다.</p>
+
     <div class="note">
       <b>수치의 집계 기준 (관세청 정의).</b>
       수출입 신고 통관 자료를 <b>국가 및 HS Code(2·4·6·10단위)별</b>로 집계한 국가별 품목별 무역통계다.
@@ -300,6 +304,10 @@
           <tr><td><code>dim_hs10_concordance</code></td><td>(hs_from, hs_to, revision)</td><td>개정 하나(2012·2017·2022)를 건너는 10자리 연결. weight(출발 코드별 합 1)·score·relation. <b>추정</b></td></tr>
           <tr><td><code>dim_hs10_to_2022</code></td><td>(hs_past, past_version, hs2022)</td><td>과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. weight·method(chain / hs6_fallback). <b>추정</b></td></tr>
           <tr><td><code>dim_hs10_name_hist</code></td><td>(hs10, byeolpyo_year)</td><td>HS10 품명 이력. 별표 여섯 판본의 국문·영문 품명. dim_hs10이 못 채운 폐지코드 이름이 여기 있다. <b>기재부 고시 원문</b></td></tr>
+          <tr><td><code>dim_nqi</code></td><td>nqi5</td><td>관세청 신성질별 분류 758개(세세분류)와 대·중·소·세 계층. 2012년 제정 후 코드 체계가 유지돼 HS 개정에 흔들리지 않는다. <b>관세청 공표</b></td></tr>
+          <tr><td><code>dim_hs10_to_nqi</code></td><td>(hs10, nqi5)</td><td>HS10 → 신성질별. weight·method(direct / chain). 현행 코드는 공표 대응표 그대로, 폐지 코드는 dim_hs10_to_2022로 이어 붙였다</td></tr>
+          <tr><td><code>dim_hs10_to_major10</code></td><td>(hs10, item)</td><td>HS10 → 10대 수출품목(반도체·승용차 등). <b>현행 수출 성질별</b> 기준이며 관세청 공표치와 대조해 확정했다</td></tr>
+          <tr><td><code>dim_workday10d</code></td><td>(base_ym, cutoff)</td><td>상순·중순·하순의 일수와 조업일수. 10일 단위 자료를 견주려면 반드시 필요하다 — 상순 조업일수가 1~8일로 여덟 배까지 벌어진다. <b>KASI 특일정보 검증 달력</b></td></tr>
         </tbody>
       </table>
     </div>

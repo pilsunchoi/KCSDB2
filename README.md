@@ -1,9 +1,11 @@
 # KCSDB2 — 관세청 무역통계 DB (재구축판)
 
-관세청 OpenAPI(품목별 국가별 수출입실적(GW), 데이터 ID 15100475) 원본을 raw로 적재하고,
-HS 개정·국가코드를 dim 계층에서 연결한 무역통계 DB.
+관세청 OpenAPI 원본을 raw로 적재하고, HS 개정·국가코드·분류 체계를 dim 계층에서 연결한 무역통계 DB.
+원천은 둘이다. 품목별 국가별 월 실적(15100475)이 본체이고, 2026-08에 수출 10대 품목의
+10일 단위 잠정치(15157908)를 더했다. 후자는 월 자료보다 훨씬 빠른 대신 국가도 중량도 없다.
 
-- 데이터 범위: 2007.01–2026.03 (231개월), 240개국, HS10 15,403종, 27,533,937 거래행
+- 데이터 범위: 월 실적 2007.01–2026.03 (231개월), 240개국, HS10 15,403종, 27,533,937 거래행
+- 10일 단위 잠정치: 2016.01–현재, 10대 품목 + 총수출, 상순·중순·월전체
 - 설계 원칙: fact는 관세청 raw만. 파생·연결·참조는 전부 dim. 상세는 docs/DB_구축_원칙.md
 - 검증: 04_validate PASS 9, WARN 4, INFO 1, FAIL 0 (2026-07-03)
 
@@ -35,6 +37,9 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 03b_build_hs6_concordance.py | HS6 개정 연계표 3종 PDF 추출 → dim_hs6_concordance. 다대다·폐지코드(deleted) 보존 |
 | 03c_build_hs10_concordance.py | HS10 개정 연계 추정 → dim_hs10_concordance, dim_hs10_to_2022. 연도별 HSK 별표 PDF 파싱 → HS6 연계표로 후보 제한 → 품명 유사도 사전가중 → 이중비례조정(IPF). 03b 이후 실행 |
 | 03d_build_hs10_name_hist.py | HS10 품명 이력 → dim_hs10_name_hist. 폐지코드 품목명(dim_hs10의 NULL)을 기재부 고시 별표에서 되찾는다 |
+| 03e_build_nqi.py | 신성질별 분류 → dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10. HS 개정에 흔들리지 않는 공식 분류로 계열을 잇는다. 과거 코드는 dim_hs10_to_2022로 이어 붙이므로 03c 이후 실행 |
+| 03f_build_workday.py | 상순·중순·하순 조업일수 → dim_workday10d. KASI 검증 공휴일 달력 사용. 10일 단위 자료를 견주려면 반드시 필요하다 |
+| 05_fetch_exp10d.py | 수출 10대 품목 10일 단위 잠정치 수집 → fact_exp10d, v_exp10d_seg. 값이 바뀔 때만 새 행을 쌓아 개정 이력을 남긴다(vintage) |
 | utils/byeolpyo.py | HSK 별표 PDF 파서. 03c·03d 공유. 열 좌표 복원·앞자리 0 보존·쪽번호 제거 |
 | 04_validate.py | 5계층 통합 검증(스키마/값/적재/dim/concordance). PASS·WARN·INFO·FAIL + 종료코드 |
 | benchmark_queries.py | (진단 도구) 분석 쿼리 4종 성능 측정. 순수 연산시간(EXPLAIN ANALYZE) vs 결과 전송시간 분리. 데이터 갱신 시 재측정용 |
@@ -55,6 +60,8 @@ DB 실물과 마찬가지로, 용량이 큰 원천 자료 일부는 저장소에
 |------|------|
 | 관세청_HS부호_20260101.xlsx | HS10 품목명·단위·발효일. dim_hs10 원천. 2026 유효코드만(폐지코드 없음) |
 | 외교부_국가표준코드_20251222.csv | ISO2/3·영문명·한글명·대륙 3종. dim_country 참조. 나미비아 ISO2='NA' 주의 |
+| 관세청_HSK별_신성질별_20260101.xlsx | HSK 10단위에 신성질별·성질별 분류를 붙인 표. dim_nqi·dim_hs10_to_nqi·dim_hs10_to_major10 원천. 공공데이터포털 15049720, 신청 불요·연간 갱신. **시트 둘의 열 이름이 다르다** — 2026년 시트만 `HS10단위부호`가 `국제적 상품분류체계(HS)10단위부호`다 |
+| KASI_공휴일_2007_2026.csv | 한국천문연구원 특일정보로 전수 대조한 공휴일. dim_workday10d 원천. **2026년 3월에서 끝나므로** 그 뒤 기간을 계산하려면 KASI API로 늘려야 한다 |
 | HS연계표_2022to2007.pdf | HS6 개정 연계(2022↔2007). 6,592쌍. concordance 원천 |
 | HS연계표_2022to2012.pdf | HS6 개정 연계(2022↔2012). 6,415쌍 |
 | HS연계표_2022to2017.pdf | HS6 개정 연계(2022↔2017). 5,937쌍. deleted 1건(300219) 포함 |
@@ -82,6 +89,9 @@ python scripts\03_build_dims.py             # dim_country, dim_hs10
 python scripts\03b_build_hs6_concordance.py # dim_hs6_concordance
 python scripts\03c_build_hs10_concordance.py # dim_hs10_concordance, dim_hs10_to_2022
 python scripts\03d_build_hs10_name_hist.py  # dim_hs10_name_hist
+python scripts\03e_build_nqi.py             # dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10
+python scripts\03f_build_workday.py         # dim_workday10d
+python scripts\05_fetch_exp10d.py --full    # fact_exp10d, v_exp10d_seg (2016~)
 python scripts\04_validate.py               # 통합 검증
 python scripts\benchmark_queries.py         # (선택) 쿼리 성능 측정. 데이터 갱신 시 재확인
 ```
@@ -96,6 +106,9 @@ python scripts\benchmark_queries.py         # (선택) 쿼리 성능 측정. 데
 - **국가코드**: 외교부_국가표준코드(공공데이터포털 data.go.kr, 데이터 ID 15091117). 이용허락범위 제한 없음.
 - **HS 품목명**: 관세청_HS부호(공공데이터포털 data.go.kr, 데이터 ID 15049722). 공공누리 제1유형(출처표시). 출처: 관세청, https://www.data.go.kr/data/15049722/fileData.do
 - **HS 개정 연계표(HS6)**: 관세청 FTA 포털 HS연계표(HS2022→2007/2012/2017). 공공누리 제1유형(출처표시). 출처: 관세청 FTA 포털, https://www.customs.go.kr/ftaportalkor/
+- **관세청 수출 주요품목별 10일 단위 잠정치**: 공공데이터포털 15157908. fact_exp10d의 원천. 상순분 11일, 중순분 21일, 월 전체 익월 1일 공표. 10대 품목은 「현행 수출 성질별」 분류로 정의되며 응답에 품목 이름이 없어 itemUsdAmt 번호 순서를 실적 대조로 확정했다.
+- **관세청 HSK별 신성질별·성질별 분류**: 공공데이터포털 15049720. dim_nqi·dim_hs10_to_nqi·dim_hs10_to_major10의 원천. 관세청이 정한 공식 대응이라 우리가 추정한 HS10 연계표와 성격이 다르다.
+- **한국천문연구원 특일정보**: dim_workday10d의 원천. 공휴일 달력을 전수 대조해 만들었다.
 - **관세·통계통합품목분류표(HSK) 별표**: 기획재정부(현 재정경제부) 고시 「관세ㆍ통계통합품목분류표」의 별표 전문 및 신구대비표. 출처: 법제처 국가법령정보센터, https://www.law.go.kr/ . dim_hs10_concordance·dim_hs10_to_2022·dim_hs10_name_hist의 원천. 앞의 두 테이블은 고시 원문이 아니라 **원문에서 우리가 추정한 연계**이므로 재배포 시 추정임을 함께 밝힌다. dim_hs10_name_hist는 고시 원문 그대로다.
 
 **무역 실적 집계 기준 (관세청 정의).** 수출입 신고 통관 자료를 국가 및 HS Code(2·4·6·10단위)별로 집계한 국가별 품목별 무역통계다. 금액은 미화(USD)로, 수출은 FOB(신고금액)·수입은 CIF(과세가격) 기준이며, 중량은 순중량(kg)이다. 국가는 수출은 최종목적국, 수입은 원산국을 원칙으로 하고 무역통계부호상 ISO 코드로 분류한다. 단순 통과물품이나 일시 반입·반출 물품은 물적 자원의 증감이 없어 제외된다. 매월 수출입 신고의 정정·취하를 반영해 전월까지 자료를 현행화한다(주기 1개월).
@@ -117,6 +130,12 @@ DB 실물(kcsdb.duckdb, ~681MB)은 GitHub 저장소 100MB 한도를 초과하므
 - **dim_hs10_concordance**: hs_from, hs_to, revision(2012/2017/2022), weight, score, relation(identity/moved). 개정 하나를 건너는 표. **추정**
 - **dim_hs10_to_2022**: hs_past, past_version(2007/2012/2017), hs2022, weight, method(chain/hs6_fallback). 과거 체계를 현행 위로 한 번에 옮기는 표. **추정**
 - **dim_hs10_name_hist**: hs10, byeolpyo_year, name_ko, name_en. 별표 여섯 판본(2011·2013·2015·2017·2021·2022)의 품명 이력 72,129행. dim_hs10이 못 채운 폐지코드 품명을 여기서 얻는다. **기재부 고시 원문**
+- **dim_nqi**: nqi5(PK), 대·중·소·세 계층 코드와 이름. 관세청 신성질별 758개. 2012년 제정 후 체계가 유지돼 HS 개정에 흔들리지 않는다. **관세청 공표**
+- **dim_hs10_to_nqi**: hs10, nqi5, weight, method(direct/chain). 현행 코드는 공표 대응표 그대로, 폐지 코드는 dim_hs10_to_2022로 이어 붙였다. 거래액 커버리지 2007~2011년 95.3%, 이후 99% 이상
+- **dim_hs10_to_major10**: hs10, item, weight, method. 10대 수출품목(반도체·승용차 등). **신성질별이 아니라 현행 수출 성질별** 기준이며 관세청 공표치와 대조해 확정했다
+- **dim_workday10d**: base_ym, cutoff(10/20/99), seg(상순/중순/하순), days, workdays, holidays. **증분 구간**이지 누적이 아니다
+- **fact_exp10d** (10일 단위 잠정치): base_ym, cutoff, priod_dt, item, exp_kusd, fetched_at. **누적치·천 달러 원본 그대로**. 같은 시점을 여러 번 관측하므로 값이 바뀔 때마다 새 행을 쌓는다
+- **v_exp10d_seg** (뷰): 최신 관측만 남기고 누적을 구간 증분으로 바꾼다. seg_kusd=증분, cum_kusd=누적. 둘을 헷갈리면 cutoff=99가 월 전체가 아니라 하순 증분이 되어 값이 40%로 나온다
 
 HS10 연계는 공식 승계표가 존재하지 않아 우리가 추정한 것이다. HS6 연계(공표된 사실)와 성격이 다르므로 테이블을 분리했다. 쓰는 법과 검증 결과는 docs/DB_구축_원칙.md §3.4 참조.
 
