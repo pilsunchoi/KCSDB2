@@ -12,7 +12,7 @@
 
 *위 수치는 `python scripts/06_db_status.py`가 DB를 읽어 자동으로 채운다. 손으로 고치지 않는다.*
 - 설계 원칙: fact는 관세청 raw만. 파생·연결·참조는 전부 dim. 상세는 docs/DB_구축_원칙.md
-- 검증: 04_validate PASS 9, WARN 4, INFO 1, FAIL 0 (2026-07-03)
+- 검증: 04_validate PASS 9, WARN 4, INFO 1, FAIL 0 (최근 실행 2026-08-29). WARN은 설계상 예상된 불완전이고 FAIL이 0인 것이 요점이다
 
 ---
 
@@ -21,7 +21,7 @@
 이 zip은 **코드·문서·외부참조자료·폴더구조**만 담는다. 실행 가능한 완결본이 아니다.
 다음 세 요소가 빠져 있어, 이 패키지만으로는 DB를 재생성할 수 없다.
 
-- **data/raw** — 원본 XML 56,852개. 로컬 수집 산출물. (재수집은 01_fetch_raw로 가능)
+- **data/raw** — 원본 XML 5만여 개. 로컬 수집 산출물. (재수집은 01_fetch_raw로 가능)
 - **config/, scripts/utils/** — 인증키·API 호출 래퍼. v1 자산. (수집·프로브 실행에 필요)
 - **data/interim, data/processed, logs** — 파이프라인 실행 산출물. (아래 실행순서로 생성)
 

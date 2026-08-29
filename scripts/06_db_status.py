@@ -13,6 +13,7 @@
 -----------
     <!-- DB_STATUS:START --> ... <!-- DB_STATUS:END -->      요약 수치
     <!-- DB_COVERAGE:START --> ... <!-- DB_COVERAGE:END -->  커버리지 수치
+    <!-- DB_VERSION:START --> ... <!-- DB_VERSION:END -->    하단 버전 배지
 
 대상은 README.md와 docs/index.html이며, 파일마다 형식이 다르므로(마크다운 목록 대
 HTML 카드) 각각에 맞게 만든다. 구간이 없는 파일은 건너뛴다.
@@ -93,10 +94,16 @@ def block_cov(s: dict) -> str:
     ])
 
 
+def block_ver(s: dict) -> str:
+    """하단 버전 배지. 모든 탭에 보이므로 낡으면 눈에 띈다."""
+    return f"v1.0-{s['hi'].replace('.', '')} 기준"
+
+
 def fill(path: Path, marker: str, body: str) -> bool:
+    """표시 구간을 채운다. 줄바꿈은 있어도 없어도 되게 두어 한 줄짜리 배지도 다룬다."""
     text = path.read_text(encoding="utf-8")
     pat = re.compile(
-        rf"(<!-- {marker}:START -->\n).*?(\n<!-- {marker}:END -->)", re.S)
+        rf"(<!-- {marker}:START -->\n?).*?(\n?<!-- {marker}:END -->)", re.S)
     if not pat.search(text):
         return False
     path.write_text(pat.sub(lambda m: m.group(1) + body + m.group(2), text),
@@ -115,6 +122,7 @@ def main() -> None:
         (ROOT / "README.md", "DB_STATUS", block_md(s)),
         (ROOT / "docs" / "index.html", "DB_STATUS", block_html(s)),
         (ROOT / "docs" / "index.html", "DB_COVERAGE", block_cov(s)),
+        (ROOT / "docs" / "index.html", "DB_VERSION", block_ver(s)),
     ]:
         ok = fill(path, marker, body)
         print(f"  {'채움' if ok else '구간 없음'}  {path.name} [{marker}]")
