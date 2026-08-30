@@ -20,6 +20,10 @@ CLAUDE.md
 docs/연구문서_작성원칙.md
 scripts/lint_research_md.py
 
+# 릴리스에 붙여넣을 문안. 06_db_status.py가 DB를 읽어 만드는 작업 문서이고
+# 산출물이 아니다. 필요하면 언제든 다시 생성된다(2026-08-30).
+docs/릴리스_본문.md
+
 # 연구용 분석 (로컬 전용, 저장소 제외)
 analysis/
 

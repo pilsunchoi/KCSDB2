@@ -19,6 +19,16 @@
 목록은 **DB에 실제로 있는 표를 읽어** 만든다. INVENTORY 사전에 설명이 없는 표가 나오면
 "(설명 미등록)"으로 찍히므로, 표를 새로 만들면 그 사전에 한 줄을 더해야 한다.
 
+게시본이 뒤처지면
+-----------------
+푸터 배지는 GitHub Releases API로 **실제 게시본**을 읽어 채운다. 예전에는 로컬 DB의
+최신월로 채웠는데, 그러면 릴리스를 안 올린 채 문서만 갱신했을 때 배지가 없는 버전을
+가리킨다. 실제로 그랬다 — 사이트는 2026.07까지라 적고 Releases에는 2026.03본뿐이었다.
+
+게시본이 로컬보다 뒤처지면 느낌표 줄로 알리고 `docs/릴리스_본문.md`에 붙여넣을 문안을
+만들어 둔다. **그 파일은 gitignore된다** — 작업 문서이지 산출물이 아니고, docs/는 Pages
+소스라 올리면 공개 웹에 그대로 서빙되기 때문이다. 필요하면 이 스크립트가 다시 만든다.
+
 대상은 README.md와 docs/index.html이며, 파일마다 형식이 다르므로(마크다운 목록 대
 HTML 카드) 각각에 맞게 만든다. 구간이 없는 파일은 건너뛴다.
 
@@ -30,14 +40,18 @@ HTML 카드) 각각에 맞게 만든다. 구간이 없는 파일은 건너뛴다
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import duckdb
 
 ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "processed" / "kcsdb.duckdb"
+RELEASES_API = "https://api.github.com/repos/pilsunchoi/KCSDB2/releases"
 
 
 # 표마다 무엇을 담고 어디서 왔는지. 행수·기간은 DB에서 읽으므로 여기 적지 않는다.
@@ -160,6 +174,84 @@ def block_inv(inv: list[dict]) -> str:
     ])
 
 
+def release_draft(s: dict, inv: list[dict], tag: str) -> str:
+    """Releases에 붙여넣을 본문 초안. DB를 읽어 만들므로 손으로 고칠 일이 없다.
+
+    예전 릴리스 본문은 출처를 넷만 적고 있었다 — 그 뒤에 표가 열넷 늘었는데
+    본문은 그대로였기 때문이다. 그래서 본문도 자동으로 만든다.
+    """
+    gz = DB.with_suffix(".duckdb.gz")
+    gzmb = gz.stat().st_size / 1024 ** 2 if gz.exists() else None
+    strip = lambda t: t.replace("<b>", "").replace("</b>", "")
+
+    def group(pre, title):
+        out = [f"**{title}**"]
+        for r in [x for x in inv if x["table"].startswith(pre)]:
+            per = f", {r['period']}" if r["period"] else ""
+            out.append(f"- `{r['table']}` {r['rows']:,}행{per} — {strip(r['desc'])}")
+        return out
+
+    srcs = []
+    for r in inv:
+        if r["src"] and r["src"] not in srcs and not r["src"].startswith("이 저장소"):
+            srcs.append(r["src"])
+
+    body = [
+        f"관세청 무역통계 DB. 월 실적 {s['lo']}–{s['hi']} ({s['months']}개월), "
+        f"{s['n_country']}개국, HS10 {s['n_hs10']:,}종, {s['rows']:,} 거래행.",
+        "",
+        f"압축 파일 `kcsdb.duckdb.gz`"
+        + (f" ({gzmb:,.0f}MB, 압축 해제 시 {s['db_mb']:,.0f}MB)" if gzmb
+           else f" (압축 해제 시 {s['db_mb']:,.0f}MB)")
+        + "를 받아 압축을 풀고 `data/processed/kcsdb.duckdb`에 놓는다.",
+        "사용법은 저장소 `docs/학생_사용안내.md`, DB 소개는 "
+        "https://pilsunchoi.github.io/KCSDB2/ 참조.",
+        "",
+        "## 들어 있는 것",
+        "",
+        *group("fact", "fact — 관세청이 준 실적 그대로"), "",
+        *group("dim", "dim — 코드에 이름과 연결을 붙이는 참조"), "",
+        *group("mart", "mart — 이 저장소가 계산한 지표 (받은 자료가 아니다)"), "",
+        "## 알아 둘 것",
+        "",
+        "- 표마다 기간이 다르다. 신성질별 공식 실적(`fact_nqi`)만 2005년부터이고, "
+        "조업일수 달력(`dim_workday10d`)은 2027년까지 미리 만들어 두었다.",
+        "- `fact_trade`와 `fact_nqi`는 **같은 무역을 다른 분류로 집계한 것이라 "
+        "더하면 안 된다.**",
+        "- `v_exp10d_seg` 뷰를 쓸 때는 `series`를 반드시 걸러야 한다"
+        "(안 그러면 품목과 국가가 섞인다).",
+        "- 접두어가 `mart`인 표는 우리가 계산한 것이다. 그대로 인용하기 전에 "
+        "근거를 확인할 것.",
+        "- 10자리 HS 연계(`dim_hs10_concordance`·`dim_hs10_to_2022`)는 공표된 표가 "
+        "아니라 **이 저장소가 고시 별표에서 추정한 것**이다. "
+        "6자리(`dim_hs6_concordance`)만 관세청 공표다.",
+        "",
+        "## 출처",
+        "",
+        *[f"- {x}" for x in srcs],
+        "",
+        "공공누리 제1유형(출처표시)으로 개방된 저작물을 이용하였다. 공공기관이 이 "
+        "저작물을 후원하거나 특수 관계에 있는 것으로 오인하게 하는 표시를 하지 않는다.",
+    ]
+    return "\n".join([
+        f"# 릴리스 본문 초안 — {tag}",
+        "",
+        "> `06_db_status.py`가 DB를 읽어 만든다. Releases에 붙여넣기 전에 다시 돌릴 것.",
+        "> 절차는 `docs/배포자_안내.md`.",
+        "",
+        f"## 태그\n\n`{tag}`",
+        "",
+        f"## 제목\n\nKCSDB2 {tag} ({s['lo']}–{s['hi']})",
+        "",
+        "## 본문 (아래 상자 안을 그대로 붙여넣는다)",
+        "",
+        "```markdown",
+        *body,
+        "```",
+        "",
+    ])
+
+
 def collect() -> dict:
     con = duckdb.connect(str(DB), read_only=True)
     try:
@@ -221,9 +313,37 @@ def block_cov(s: dict) -> str:
     ])
 
 
-def block_ver(s: dict) -> str:
+def released() -> dict | None:
+    """실제로 게시된 최신 릴리스. 못 읽으면 None.
+
+    배지는 **읽는 사람이 받을 수 있는 것**을 말해야 한다. 예전에는 로컬 DB의
+    최신월로 채웠는데, 그러면 릴리스를 안 올린 채 문서만 갱신했을 때 배지가
+    없는 버전을 가리킨다. 실제로 그런 일이 있었다 — 사이트는 v1.0-202607이라
+    적고 Releases에는 v1.0-202603만 있었다.
+    """
+    try:
+        req = urllib.request.Request(
+            RELEASES_API, headers={"User-Agent": "kcsdb-db-status",
+                                   "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            rel = json.load(r)
+    except Exception:
+        return None
+    rel = [x for x in rel if not x.get("draft")]
+    if not rel:
+        return None
+    top = rel[0]
+    asset = max(top.get("assets") or [], key=lambda a: a["size"], default=None)
+    return dict(tag=top["tag_name"], published=top["published_at"][:10],
+                mb=(asset["size"] / 1024 ** 2) if asset else 0.0,
+                name=asset["name"] if asset else "")
+
+
+def block_ver(s: dict, rel: dict | None) -> str:
     """하단 버전 배지. 모든 탭에 보이므로 낡으면 눈에 띈다."""
-    return f"v1.0-{s['hi'].replace('.', '')} 기준"
+    if rel is None:                       # 망을 못 쓰면 로컬 기준임을 밝힌다
+        return f"로컬 DB {s['hi']} 기준 (게시본 확인 못 함)"
+    return f"내려받기 {rel['tag']} · {rel['published']} 게시"
 
 
 def fill(path: Path, marker: str, body: str) -> bool:
@@ -241,16 +361,37 @@ def fill(path: Path, marker: str, body: str) -> bool:
 def main() -> None:
     s = collect()
     inv = inventory()
+    rel = released()
     print(f"fact_trade {s['rows']:,}행 | {s['lo']}~{s['hi']} ({s['months']}개월) | "
           f"{s['n_country']}개국 | HS10 {s['n_hs10']:,}종")
     print(f"품목명 매칭 {s['named']:,}/{s['n_hs10']:,} ({s['pct']:.1f}%) | "
           f"10일 단위 {s['exp_lo']}~{s['exp_hi']} | DB {s['db_mb']:,.0f}MB")
+
+    # 게시본이 로컬보다 뒤처지면 크게 알린다. 문서만 갱신하고 릴리스를 안 올리면
+    # 읽는 사람은 사이트가 설명하는 것과 다른 DB를 받게 된다.
+    if rel is None:
+        print("\n  [알림] 게시된 릴리스를 확인하지 못했다(망 문제일 수 있다). "
+              "배지는 로컬 기준으로 적었다.")
+    else:
+        want = f"v1.0-{s['hi'].replace('.', '')}"
+        print(f"\n게시본 {rel['tag']} ({rel['published']}, {rel['name']} "
+              f"{rel['mb']:,.0f}MB) | 로컬 기준이면 {want}")
+        if rel["tag"] != want:
+            draft = ROOT / "docs" / "릴리스_본문.md"
+            draft.write_text(release_draft(s, inv, want), encoding="utf-8",
+                             newline="\n")
+            print("\n" + "!" * 68)
+            print(f"  게시본이 로컬보다 뒤처진다. 사이트는 {s['lo']}~{s['hi']}를 설명하는데")
+            print(f"  Releases에서 받을 수 있는 것은 {rel['tag']}이다.")
+            print(f"  새 릴리스를 올릴 것 — 절차는 docs/배포자_안내.md, 본문 초안은")
+            print(f"  docs/릴리스_본문.md에 있다.")
+            print("!" * 68)
     print()
     for path, marker, body in [
         (ROOT / "README.md", "DB_STATUS", block_md(s)),
         (ROOT / "docs" / "index.html", "DB_STATUS", block_html(s)),
         (ROOT / "docs" / "index.html", "DB_COVERAGE", block_cov(s)),
-        (ROOT / "docs" / "index.html", "DB_VERSION", block_ver(s)),
+        (ROOT / "docs" / "index.html", "DB_VERSION", block_ver(s, rel)),
         (ROOT / "docs" / "index.html", "DB_INVENTORY", block_inv(inv)),
     ]:
         ok = fill(path, marker, body)
