@@ -486,7 +486,11 @@ API의 우위는 내용이 아니라 10일 단위라는 시간 해상도뿐이�
 
 #### 원본 그대로 담는다
 
-`fact_exp10d(base_ym, cutoff, priod_dt, item, exp_kusd, fetched_at)`
+`fact_exp10d(series, base_ym, cutoff, priod_dt, item, amt_kusd, fetched_at)`
+
+**2026-08-29에 네 계열로 넓혔다.** `series`가 `exp_item`(수출 주요품목별)·`exp_cnty`(수출 주요국가별)·`imp_item`(수입 주요품목별)·`imp_cnty`(수입 주요국가별) 넷이다. 수입을 함께 담게 되어 `exp_kusd`를 `amt_kusd`로 바꿨다 — **기존 노트북에서 `exp_kusd`를 쓰던 곳은 고쳐야 한다.** 뷰 `v_exp10d_seg`의 `seg_kusd`·`cum_kusd`는 이름이 그대로이나 **`series`를 걸러 쓰지 않으면 네 계열이 섞인다.**
+
+응답에 항목 이름이 없고 `itemUsdAmt00~10` 번호뿐이라 순서를 알아야 하는데, **번호가 금액 순이 아니다**(수출 국가별 04가 베트남인데 03이 유럽연합이다). 2026년 8월 1~20일 보도자료 붙임 표와 33개 값을 전부 대조해 확정했고, 수집기가 매번 품목 계열과 국가 계열의 총계를 맞대 검증한다.
 
 값은 **누적치**(1~10일, 1~20일, 1~말일)이고 단위는 **천 달러**다. 원본이 그러하므로 그대로
 담는다. 구간 증분과 억 달러 환산은 뷰 `v_exp10d_seg`가 맡는다 — fact는 raw라는 원칙 그대로다.

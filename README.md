@@ -6,8 +6,8 @@
 
 <!-- DB_STATUS:START -->
 - 데이터 범위: 월 실적 2007.01–2026.07 (235개월), 240개국, HS10 15,406종, 28,093,109 거래행
-- 10일 단위 잠정치: 2016.01–2026.08, 10대 품목 + 총수출
-- DB 파일: 약 713MB
+- 10일 단위 잠정치: 2016.01–2026.08, 4개 계열(수출·수입 × 품목·국가) 16,852행
+- DB 파일: 약 841MB
 <!-- DB_STATUS:END -->
 - 설계 원칙: fact는 관세청 raw만. 파생·연결·참조는 전부 dim. 상세는 docs/DB_구축_원칙.md
 - 검증: 04_validate PASS 9, WARN 4, INFO 1, FAIL 0 (최근 실행 2026-08-29). WARN은 설계상 예상된 불완전이고 FAIL이 0인 것이 요점이다
@@ -47,7 +47,11 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 03e_build_nqi.py | 신성질별 분류 → dim_nqi, dim_hs10_to_nqi, dim_hs10_to_major10. HS 개정에 흔들리지 않는 공식 분류로 계열을 잇는다. 과거 코드는 dim_hs10_to_2022로 이어 붙이므로 03c 이후 실행 |
 | 03f_build_workday.py | 상순·중순·하순 조업일수 → dim_workday10d. KASI 검증 공휴일 달력 사용. 10일 단위 자료를 견주려면 반드시 필요하다 |
 | 03g_fetch_holidays.py | 공휴일 달력을 KASI 특일정보 API에서 받아 늘린다. `isHoliday='Y'`만 받고(24절기 등 쉬지 않는 날 제외), 기존 날짜는 건드리지 않고 없는 기간만 덧붙인다. **03f보다 먼저 실행한다** — 달력이 끝나는 지점부터는 조업일수를 낼 수 없다 |
-| 05_fetch_exp10d.py | 수출 10대 품목 10일 단위 잠정치 수집 → fact_exp10d, v_exp10d_seg. 값이 바뀔 때만 새 행을 쌓아 개정 이력을 남긴다(vintage) |
+| 05_fetch_exp10d.py | 10일 단위 잠정치 **네 계열** 수집 → fact_exp10d, v_exp10d_seg. 수출·수입 × 품목·국가(15157908·15157941·15157901·15157909). 값이 바뀔 때만 새 행을 쌓아 개정 이력을 남긴다(vintage). 응답에 항목 이름이 없어 번호 순서를 보도자료 붙임 표와 전수 대조해 확정했다 |
+| 07_exp10d_metrics.py | 10일 단위 잠정치 **네 계열 전부**에서 지표를 만든다(마트에 `series` 열) → mart_exp10d_beta·mart_exp10d_progress·mart_exp10d_metrics. 품목별 조업일수 탄력성, 보정 전년 동기 대비, 기여도 분해, 진도율 분포. **조업일수를 일괄 보정하면 안 된다** — 탄력성이 반도체 0.24에서 자동차부품 1.10까지 벌어진다. 05·03f 이후 실행 |
+| 08_exp10d_forecast.py | 상순·중순 실적으로 그 달 전체를 예측한다(**수출 두 계열만** — 수입은 지표까지) → mart_exp10d_forecast·mart_exp10d_fcskill·mart_exp10d_fclog. 월 전체 = 누적 / 예상 진도율. 확장창 표본외로 총수출 평균절대오차가 상순 5.5%, 중순 2.4%다. **10일 자료가 있어야만 낼 수 있고 관세청이 공표하지 않는 값**이다. 07 이후 실행 |
+| 09_build_exp10d_dashboard.py | 10일 단위 수출 트렌드 대시보드 → `docs/exp10d.html`. CSS·JS·그림 전부 인라인이라 파일 하나로 열린다. **수치를 손으로 적지 않는다** — 07·08의 마트를 읽어 채운다. 08 이후 실행 |
+| 10_fetch_newtemper.py | 신성질별 **국가별** 수출입실적 수집 → fact_nqi, mart_nqi_check. 공공데이터포털 15101616(`newtempertrade`), 2005.01~. **우리 도출로는 못 만드는 것**이라 받는다 — `dim_hs10_to_nqi` 도출치는 총액은 맞지만 세세분류 배분이 2007년 25%, 2017년 5% 어긋난다(2022년 이후는 0.3%). `mart_nqi_check`가 그 대조를 남긴다 |
 | utils/api_client.py | 관세청 OpenAPI 호출 래퍼. 00·01 공유. 재시도·오류코드 판정 |
 | utils/country_codes.py | 외교부 국가표준코드 CSV 로더. 00·01·03 공유 |
 | utils/byeolpyo.py | HSK 별표 PDF 파서. 03c·03d 공유. 열 좌표 복원·앞자리 0 보존·쪽번호 제거 |
@@ -104,6 +108,10 @@ python scripts\01_fetch_raw.py --year-from 2026 --year-to 2026 --ym-from 202608 
 python scripts\02a_xml_to_parquet.py --year 2026 --force
 python scripts\02c_reload_year.py --year 2026 # 해당 연도 fact 행만 교체 (dim 보존)
 python scripts\05_fetch_exp10d.py             # 10일 단위 잠정치 갱신
+python scripts\07_exp10d_metrics.py           # 10일 단위 지표 마트 재계산
+python scripts\08_exp10d_forecast.py          # 월 마감 예측 (07 이후)
+python scripts\09_build_exp10d_dashboard.py   # docs/exp10d.html 생성 (08 이후)
+python scripts\10_fetch_newtemper.py          # 신성질별 국가별 실적 (선택·무거움)
 python scripts\04_validate.py                 # 통합 검증
 python scripts\06_db_status.py                # 문서의 현황 수치 자동 갱신
 ```
@@ -127,6 +135,10 @@ python scripts\03e_build_nqi.py              # dim_nqi, dim_hs10_to_nqi, dim_hs1
 python scripts\03g_fetch_holidays.py --to 2027 # 공휴일 달력 연장 (03f보다 먼저)
 python scripts\03f_build_workday.py          # dim_workday10d
 python scripts\05_fetch_exp10d.py --full     # fact_exp10d, v_exp10d_seg (2016~)
+python scripts\07_exp10d_metrics.py          # mart_exp10d_* (05·03f 이후)
+python scripts\08_exp10d_forecast.py         # 월 마감 예측 (07 이후)
+python scripts\09_build_exp10d_dashboard.py  # docs/exp10d.html 생성 (08 이후)
+python scripts\10_fetch_newtemper.py         # 신성질별 국가별 실적 (선택·무거움)
 python scripts\04_validate.py                # 통합 검증
 python scripts\06_db_status.py               # 문서의 현황 수치 자동 갱신
 python scripts\benchmark_queries.py          # (선택) 쿼리 성능 측정
@@ -146,6 +158,8 @@ python scripts\benchmark_queries.py          # (선택) 쿼리 성능 측정
 - **HS 품목명**: 관세청_HS부호(공공데이터포털 data.go.kr, 데이터 ID 15049722). 공공누리 제1유형(출처표시). 출처: 관세청, https://www.data.go.kr/data/15049722/fileData.do
 - **HS 개정 연계표(HS6)**: 관세청 FTA 포털 HS연계표(HS2022→2007/2012/2017). 공공누리 제1유형(출처표시). 출처: 관세청 FTA 포털, https://www.customs.go.kr/ftaportalkor/
 - **관세청 수출 주요품목별 10일 단위 잠정치**: 공공데이터포털 15157908. fact_exp10d의 원천. 상순분 11일, 중순분 21일, 월 전체 익월 1일 공표. 10대 품목은 「현행 수출 성질별」 분류로 정의되며 응답에 품목 이름이 없어 itemUsdAmt 번호 순서를 실적 대조로 확정했다.
+- **관세청 신성질별 수출입실적**: 공공데이터포털 15101616. `fact_nqi`의 원천. 엔드포인트는 `newtempertrade`(신성질 = new temper)이고 필수 변수가 `imexTpcd`(1=수출, 2=수입)다. 페이지네이션이 없어 연 단위로 나눠 받으면 44회로 끝난다. 데이터셋 설명과 달리 **국가코드와 중량이 들어 있다**.
+- **관세청 10일 단위 잠정치 네 계열**: 공공데이터포털 15157941(수출 주요국가별)·15157901(수입 주요품목별)·15157909(수입 주요국가별). 15157908과 같은 규칙이며 엔드포인트만 `cntyMmUt…`/`…ImpAcrs`로 갈린다. 넷 다 활용신청이 필요하고 자동승인이다. 수출 10개국은 중국·미국·유럽연합·베트남·홍콩·일본·대만·인도·싱가포르·말레이시아, 수입 10개국은 중국·미국·유럽연합·일본·베트남·호주·대만·사우디아라비아·러시아·말레이시아다.
 - **관세청 HSK별 신성질별·성질별 분류**: 공공데이터포털 15049720. dim_nqi·dim_hs10_to_nqi·dim_hs10_to_major10의 원천. 관세청이 정한 공식 대응이라 우리가 추정한 HS10 연계표와 성격이 다르다.
 - **한국천문연구원 특일정보**: dim_workday10d의 원천. 공휴일 달력을 전수 대조해 만들었다.
 - **관세·통계통합품목분류표(HSK) 별표**: 기획재정부(현 재정경제부) 고시 「관세ㆍ통계통합품목분류표」의 별표 전문 및 신구대비표. 출처: 법제처 국가법령정보센터, https://www.law.go.kr/ . dim_hs10_concordance·dim_hs10_to_2022·dim_hs10_name_hist의 원천. 앞의 두 테이블은 고시 원문이 아니라 **원문에서 우리가 추정한 연계**이므로 재배포 시 추정임을 함께 밝힌다. dim_hs10_name_hist는 고시 원문 그대로다.
@@ -173,8 +187,9 @@ DB 실물(kcsdb.duckdb)은 GitHub 저장소 100MB 한도를 크게 초과하므�
 - **dim_hs10_to_nqi**: hs10, nqi5, weight, method(direct/chain). 현행 코드는 공표 대응표 그대로, 폐지 코드는 dim_hs10_to_2022로 이어 붙였다. 거래액 커버리지 2007~2011년 95.3%, 이후 99% 이상
 - **dim_hs10_to_major10**: hs10, item, weight, method. 10대 수출품목(반도체·승용차 등). **신성질별이 아니라 현행 수출 성질별** 기준이며 관세청 공표치와 대조해 확정했다
 - **dim_workday10d**: base_ym, cutoff(10/20/99), seg(상순/중순/하순), days, workdays, holidays. **증분 구간**이지 누적이 아니다
-- **fact_exp10d** (10일 단위 잠정치): base_ym, cutoff, priod_dt, item, exp_kusd, fetched_at. **누적치·천 달러 원본 그대로**. 같은 시점을 여러 번 관측하므로 값이 바뀔 때마다 새 행을 쌓는다
-- **v_exp10d_seg** (뷰): 최신 관측만 남기고 누적을 구간 증분으로 바꾼다. seg_kusd=증분, cum_kusd=누적. 둘을 헷갈리면 cutoff=99가 월 전체가 아니라 하순 증분이 되어 값이 40%로 나온다
+- **fact_exp10d** (10일 단위 잠정치): series, base_ym, cutoff, priod_dt, item, amt_kusd, fetched_at. **누적치·천 달러 원본 그대로**. `series`가 `exp_item`·`exp_cnty`·`imp_item`·`imp_cnty` 넷이다. 같은 시점을 여러 번 관측하므로 값이 바뀔 때마다 새 행을 쌓는다. **2026-08-29에 스키마가 바뀌었다** — `exp_kusd`가 `amt_kusd`로 바뀌고(수입도 담게 되어) `series`가 생겼다
+- **fact_nqi** (신성질별 국가별 실적): yyyymm, stat_cd, nqi5, exp_dlr, exp_wgt, imp_dlr, imp_wgt. 6,567,873행. **범위가 fact_trade와 다르다 — 이 표만 2005.01부터다.** 관세청 공식 집계라 `dim_hs10_to_nqi` 도출치와 달리 HS 개정 추정이 안 섞인다
+- **v_exp10d_seg** (뷰): 최신 관측만 남기고 누적을 구간 증분으로 바꾼다. seg_kusd=증분, cum_kusd=누적. **`series`를 반드시 걸러 쓸 것**(안 그러면 네 계열이 섞인다). 둘을 헷갈리면 cutoff=99가 월 전체가 아니라 하순 증분이 되어 값이 40%로 나온다
 
 HS10 연계는 공식 승계표가 존재하지 않아 우리가 추정한 것이다. HS6 연계(공표된 사실)와 성격이 다르므로 테이블을 분리했다. 쓰는 법과 검증 결과는 docs/DB_구축_원칙.md §3.4 참조.
 

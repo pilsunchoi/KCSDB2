@@ -14,6 +14,10 @@
     <!-- DB_STATUS:START --> ... <!-- DB_STATUS:END -->      요약 수치
     <!-- DB_COVERAGE:START --> ... <!-- DB_COVERAGE:END -->  커버리지 수치
     <!-- DB_VERSION:START --> ... <!-- DB_VERSION:END -->    하단 버전 배지
+    <!-- DB_INVENTORY:START --> ... <!-- DB_INVENTORY:END -->  표 전체 목록과 출처
+
+목록은 **DB에 실제로 있는 표를 읽어** 만든다. INVENTORY 사전에 설명이 없는 표가 나오면
+"(설명 미등록)"으로 찍히므로, 표를 새로 만들면 그 사전에 한 줄을 더해야 한다.
 
 대상은 README.md와 docs/index.html이며, 파일마다 형식이 다르므로(마크다운 목록 대
 HTML 카드) 각각에 맞게 만든다. 구간이 없는 파일은 건너뛴다.
@@ -36,6 +40,126 @@ ROOT = Path(__file__).resolve().parent.parent
 DB = ROOT / "data" / "processed" / "kcsdb.duckdb"
 
 
+# 표마다 무엇을 담고 어디서 왔는지. 행수·기간은 DB에서 읽으므로 여기 적지 않는다.
+# (설명, 단위, 출처) 순. 새 표를 만들면 여기 한 줄을 더한다.
+INVENTORY = {
+    "fact_trade": ("국가 × HS10 품목 × 월 수출입 실적. 이 DB의 본체",
+                   "국가 × HS10 × 월",
+                   "관세청 품목별 국가별 수출입실적(GW) · 공공데이터포털 15100475"),
+    "fact_total": ("품목 구분 없는 국가 × 월 총계",
+                   "국가 × 월",
+                   "관세청 품목별 국가별 수출입실적(GW) · 15100475 (총계 응답)"),
+    "fact_nqi": ("신성질별 × 국가 × 월 수출입 실적. 관세청이 직접 집계한 공식치라 "
+                 "HS 개정 추정이 섞이지 않는다. <b>이 표만 2005년부터다</b>",
+                 "신성질별 × 국가 × 월",
+                 "관세청 신성질별 수출입실적(GW) · 15101616"),
+    "fact_exp10d": ("10일 단위 잠정치 네 계열(수출·수입 × 주요품목·주요국가). "
+                    "값이 바뀔 때마다 새 행을 쌓아 관측 이력을 남긴다",
+                    "계열 × 항목 × 순(旬)",
+                    "관세청 10일 단위 잠정치 · 15157908·15157941·15157901·15157909"),
+    "dim_country": ("국가코드에 관세청 국명과 외교부 표준명·ISO2/3·대륙을 병기",
+                    "국가", "관세청 + 외교부 국가표준코드 · 15091117"),
+    "dim_hs10": ("HS10 품목명(한/영)·수량/중량 단위·적용시작일",
+                 "HS10", "관세청 HS부호 · 15049722"),
+    "dim_hs6_concordance": ("HS 개정 사이 6자리 대응. <b>관세청 공표</b>",
+                            "(HS2022, 과거코드, 판본)", "관세청 FTA 포털 HS 연계표"),
+    "dim_hs10_concordance": ("개정 하나(2012·2017·2022)를 건너는 10자리 연결. <b>추정</b>",
+                             "(출발코드, 도착코드, 개정)",
+                             "기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터"),
+    "dim_hs10_to_2022": ("과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. <b>추정</b>",
+                         "(과거코드, 판본, HS2022)",
+                         "기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터"),
+    "dim_hs10_name_hist": ("HS10 품명 이력. 폐지코드 이름이 여기 있다",
+                           "(HS10, 별표 연도)",
+                           "기재부 고시 「관세·통계통합품목분류표」 별표 · 국가법령정보센터"),
+    "dim_nqi": ("신성질별 분류의 대·중·소·세·세세 5단 계층과 이름",
+                "신성질별 세세분류", "관세청 신성질별 분류 · 15049720"),
+    "dim_hs10_to_nqi": ("HS10 → 신성질별. 현행 코드는 공표 대응, 폐지 코드는 추정 경유",
+                        "(HS10, 신성질별)", "관세청 15049720 + 이 저장소 추정"),
+    "dim_hs10_to_major10": ("HS10 → 수출 10대 품목. 관세청 공표치와 대조해 확정",
+                            "(HS10, 품목)", "관세청 15049720 + 공표치 대조"),
+    "dim_workday10d": ("상순·중순·하순의 일수와 조업일수. 10일 자료를 견주려면 필요하다",
+                       "(연월, 구간)", "한국천문연구원 특일정보 API로 대조한 공휴일 달력"),
+    "meta_calls": ("API 호출 기록. 무엇을 언제 몇 번 받았는지",
+                   "호출", "이 저장소의 수집 로그"),
+    "mart_exp10d_metrics": ("10일 자료 지표 — 조업일수 보정 전년 대비, 비중, 기여도, 진도율",
+                            "계열 × 순 × 항목", "이 저장소가 계산"),
+    "mart_exp10d_beta": ("항목별 조업일수 탄력성", "계열 × 항목 × 대상", "이 저장소가 추정"),
+    "mart_exp10d_progress": ("진도율 분포(조업일 보정 전후)", "계열 × 항목 × 구간 × 달",
+                             "이 저장소가 계산"),
+    "mart_exp10d_forecast": ("월 마감 예측과 구간", "계열 × 순 × 항목", "이 저장소가 추정"),
+    "mart_exp10d_fcskill": ("예측의 표본외 성적과 등급", "계열 × 항목 × 구간",
+                            "이 저장소가 계산"),
+    "mart_exp10d_fclog": ("확정 전 예측의 기록(추가 전용)", "예측 시점", "이 저장소가 계산"),
+    "mart_nqi_check": ("신성질별 공식치와 우리 도출치의 월별 대조", "월", "이 저장소가 계산"),
+}
+
+PERIOD_COL = {"fact_trade": "yyyymm", "fact_total": "yyyymm", "fact_nqi": "yyyymm",
+              "fact_exp10d": "base_ym", "dim_workday10d": "base_ym",
+              "mart_exp10d_metrics": "base_ym", "mart_exp10d_forecast": "base_ym",
+              "mart_nqi_check": "yyyymm"}
+
+
+def inventory() -> list[dict]:
+    """DB에 실제로 있는 표를 읽어 목록을 만든다. 설명은 INVENTORY 사전에서 가져온다."""
+    con = duckdb.connect(str(DB), read_only=True)
+    try:
+        names = [r[0] for r in con.sql(
+            "SELECT table_name FROM duckdb_tables()").fetchall()]
+        # INVENTORY에 적은 순서를 따른다. 알파벳순이면 본체인 fact_trade가 맨 뒤로
+        # 밀려 읽는 순서가 어그러진다. 사전에 없는 표는 뒤에 붙는다.
+        order = {t: i for i, t in enumerate(INVENTORY)}
+        names.sort(key=lambda t: (order.get(t, 10_000), t))
+        out = []
+        for t in names:
+            n = con.sql(f"SELECT COUNT(*) FROM {t}").fetchone()[0]
+            per = ""
+            col = PERIOD_COL.get(t)
+            if col:
+                a, b = con.sql(f"SELECT MIN({col}), MAX({col}) FROM {t}").fetchone()
+                if a:
+                    per = f"{a // 100}.{a % 100:02d}–{b // 100}.{b % 100:02d}"
+            d, u, src = INVENTORY.get(t, ("(설명 미등록)", "", ""))
+            out.append(dict(table=t, rows=n, period=per, desc=d, unit=u, src=src))
+        return out
+    finally:
+        con.close()
+
+
+def block_inv(inv: list[dict]) -> str:
+    """표 전체 목록. 종류별로 묶어 보여 준다."""
+    groups = [("fact", "fact — 관세청이 준 실적 그대로"),
+              ("dim", "dim — 코드에 이름과 연결을 붙이는 참조"),
+              ("mart", "mart — 이 저장소가 계산한 지표"),
+              ("meta", "meta — 수집 기록")]
+    rows = []
+    for pre, title in groups:
+        part = [r for r in inv if r["table"].startswith(pre)]
+        if not part:
+            continue
+        rows.append(f'          <tr class="grp"><td colspan="5">{title}</td></tr>')
+        for r in part:
+            rows.append(
+                "          <tr>"
+                f"<td><code>{r['table']}</code></td>"
+                f"<td>{r['desc']}</td>"
+                f"<td class=\"r\">{r['rows']:,}</td>"
+                f"<td class=\"s\">{r['period'] or '—'}</td>"
+                f"<td class=\"s\">{r['src']}</td></tr>")
+    return "\n".join([
+        '    <div class="tblwrap">',
+        '      <table class="inv">',
+        '        <caption>이 DB에 들어 있는 것 전부 (행수·기간은 자동 갱신)</caption>',
+        '        <thead><tr><th>테이블</th><th>담는 것</th><th class="r">행수</th>'
+        '<th>기간</th><th>출처</th></tr></thead>',
+        '        <tbody>',
+        *rows,
+        '        </tbody>',
+        '      </table>',
+        '    </div>',
+    ])
+
+
 def collect() -> dict:
     con = duckdb.connect(str(DB), read_only=True)
     try:
@@ -46,7 +170,9 @@ def collect() -> dict:
         n_hs10 = con.sql("SELECT COUNT(DISTINCT hs10) FROM fact_trade").fetchone()[0]
         named = con.sql("""SELECT COUNT(DISTINCT f.hs10) FROM fact_trade f
                            JOIN dim_hs10 d USING (hs10)""").fetchone()[0]
-        e_lo, e_hi = con.sql("SELECT MIN(base_ym), MAX(base_ym) FROM fact_exp10d").fetchone()
+        e_lo, e_hi, e_rows, e_ser = con.sql(
+            "SELECT MIN(base_ym), MAX(base_ym), COUNT(*), COUNT(DISTINCT series) "
+            "FROM fact_exp10d").fetchone()
     finally:
         con.close()
 
@@ -55,7 +181,7 @@ def collect() -> dict:
         rows=rows, months=months, lo=fmt(lo), hi=fmt(hi),
         n_country=n_country, n_hs10=n_hs10, named=named,
         pct=100.0 * named / n_hs10,
-        exp_lo=fmt(e_lo), exp_hi=fmt(e_hi),
+        exp_lo=fmt(e_lo), exp_hi=fmt(e_hi), exp_rows=e_rows, exp_series=e_ser,
         db_mb=DB.stat().st_size / 1024 ** 2,
     )
 
@@ -64,7 +190,8 @@ def block_md(s: dict) -> str:
     return (
         f"- 데이터 범위: 월 실적 {s['lo']}–{s['hi']} ({s['months']}개월), "
         f"{s['n_country']}개국, HS10 {s['n_hs10']:,}종, {s['rows']:,} 거래행\n"
-        f"- 10일 단위 잠정치: {s['exp_lo']}–{s['exp_hi']}, 10대 품목 + 총수출\n"
+        f"- 10일 단위 잠정치: {s['exp_lo']}–{s['exp_hi']}, "
+        f"{s['exp_series']}개 계열(수출·수입 × 품목·국가) {s['exp_rows']:,}행\n"
         f"- DB 파일: 약 {s['db_mb']:,.0f}MB"
     )
 
@@ -113,6 +240,7 @@ def fill(path: Path, marker: str, body: str) -> bool:
 
 def main() -> None:
     s = collect()
+    inv = inventory()
     print(f"fact_trade {s['rows']:,}행 | {s['lo']}~{s['hi']} ({s['months']}개월) | "
           f"{s['n_country']}개국 | HS10 {s['n_hs10']:,}종")
     print(f"품목명 매칭 {s['named']:,}/{s['n_hs10']:,} ({s['pct']:.1f}%) | "
@@ -123,6 +251,7 @@ def main() -> None:
         (ROOT / "docs" / "index.html", "DB_STATUS", block_html(s)),
         (ROOT / "docs" / "index.html", "DB_COVERAGE", block_cov(s)),
         (ROOT / "docs" / "index.html", "DB_VERSION", block_ver(s)),
+        (ROOT / "docs" / "index.html", "DB_INVENTORY", block_inv(inv)),
     ]:
         ok = fill(path, marker, body)
         print(f"  {'채움' if ok else '구간 없음'}  {path.name} [{marker}]")
