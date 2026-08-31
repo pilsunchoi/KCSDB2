@@ -40,6 +40,7 @@ HTML 카드) 각각에 맞게 만든다. 구간이 없는 파일은 건너뛴다
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
 import re
@@ -67,6 +68,11 @@ INVENTORY = {
                  "HS 개정 추정이 섞이지 않는다. <b>이 표만 2005년부터다</b>",
                  "신성질별 × 국가 × 월",
                  "관세청 신성질별 수출입실적(GW) · 15101616"),
+    "fact_temper": ("성질별 × 월 수출입 실적. 관세청 공식치이고 <b>이 표만 1995년부터</b>다. "
+                    "10일 자료의 10대 품목이 이 분류로 정의되어, 품목 단위로 맞대 볼 수 "
+                    "있는 유일한 계열이다. 수출과 수입은 부호 체계가 서로 다르다",
+                    "방향 × 성질부호 × 월",
+                    "관세청 성질별 수출입실적(GW) · 15102109"),
     "fact_exp10d": ("10일 단위 잠정치 네 계열(수출·수입 × 주요품목·주요국가). "
                     "값이 바뀔 때마다 새 행을 쌓아 관측 이력을 남긴다",
                     "계열 × 항목 × 순(旬)",
@@ -92,6 +98,9 @@ INVENTORY = {
                         "(HS10, 신성질별)", "관세청 15049720 + 이 저장소 추정"),
     "dim_hs10_to_major10": ("HS10 → 수출 10대 품목. 관세청 공표치와 대조해 확정",
                             "(HS10, 품목)", "관세청 15049720 + 공표치 대조"),
+    "dim_temper": ("성질별 부호의 이름과 4단 계층, 그리고 10대 품목 꼬리표. "
+                   "이름은 API 응답에서 와 폐지부호까지 담고, 계층은 별표에서 온다",
+                   "(방향, 성질부호)", "관세청 성질별 수출입실적 15102109 + 신성질별 분류 15049720"),
     "dim_workday10d": ("상순·중순·하순의 일수와 조업일수. 10일 자료를 견주려면 필요하다",
                        "(연월, 구간)", "한국천문연구원 특일정보 API로 대조한 공휴일 달력"),
     "meta_calls": ("API 호출 기록. 무엇을 언제 몇 번 받았는지",
@@ -109,6 +118,7 @@ INVENTORY = {
 }
 
 PERIOD_COL = {"fact_trade": "yyyymm", "fact_total": "yyyymm", "fact_nqi": "yyyymm",
+              "fact_temper": "yyyymm",
               "fact_exp10d": "base_ym", "dim_workday10d": "base_ym",
               "mart_exp10d_metrics": "base_ym", "mart_exp10d_forecast": "base_ym",
               "mart_nqi_check": "yyyymm"}
@@ -174,7 +184,7 @@ def block_inv(inv: list[dict]) -> str:
     ])
 
 
-def release_draft(s: dict, inv: list[dict], tag: str) -> str:
+def release_body(s: dict, inv: list[dict]) -> list[str]:
     """Releases에 붙여넣을 본문 초안. DB를 읽어 만들므로 손으로 고칠 일이 없다.
 
     예전 릴리스 본문은 출처를 넷만 적고 있었다 — 그 뒤에 표가 열넷 늘었는데
@@ -214,10 +224,11 @@ def release_draft(s: dict, inv: list[dict], tag: str) -> str:
         *group("mart", "mart — 이 저장소가 계산한 지표 (받은 자료가 아니다)"), "",
         "## 알아 둘 것",
         "",
-        "- 표마다 기간이 다르다. 신성질별 공식 실적(`fact_nqi`)만 2005년부터이고, "
-        "조업일수 달력(`dim_workday10d`)은 2027년까지 미리 만들어 두었다.",
-        "- `fact_trade`와 `fact_nqi`는 **같은 무역을 다른 분류로 집계한 것이라 "
-        "더하면 안 된다.**",
+        "- 표마다 기간이 다르다. 성질별 공식 실적(`fact_temper`)은 1995년, "
+        "신성질별(`fact_nqi`)은 2005년부터이고, 조업일수 달력(`dim_workday10d`)은 "
+        "2027년까지 미리 만들어 두었다.",
+        "- `fact_trade`·`fact_nqi`·`fact_temper`는 **같은 무역을 다른 분류로 "
+        "집계한 것이라 서로 더하면 안 된다.**",
         "- `v_exp10d_seg` 뷰를 쓸 때는 `series`를 반드시 걸러야 한다"
         "(안 그러면 품목과 국가가 섞인다).",
         "- 접두어가 `mart`인 표는 우리가 계산한 것이다. 그대로 인용하기 전에 "
@@ -233,6 +244,11 @@ def release_draft(s: dict, inv: list[dict], tag: str) -> str:
         "공공누리 제1유형(출처표시)으로 개방된 저작물을 이용하였다. 공공기관이 이 "
         "저작물을 후원하거나 특수 관계에 있는 것으로 오인하게 하는 표시를 하지 않는다.",
     ]
+    return body
+
+
+def release_draft(s: dict, inv: list[dict], tag: str) -> str:
+    """붙여넣기 전에 읽는 안내가 붙은 초안. 본문 자체는 release_body가 만든다."""
     return "\n".join([
         f"# 릴리스 본문 초안 — {tag}",
         "",
@@ -246,7 +262,7 @@ def release_draft(s: dict, inv: list[dict], tag: str) -> str:
         "## 본문 (아래 상자 안을 그대로 붙여넣는다)",
         "",
         "```markdown",
-        *body,
+        *release_body(s, inv),
         "```",
         "",
     ])
@@ -274,7 +290,7 @@ def collect() -> dict:
         n_country=n_country, n_hs10=n_hs10, named=named,
         pct=100.0 * named / n_hs10,
         exp_lo=fmt(e_lo), exp_hi=fmt(e_hi), exp_rows=e_rows, exp_series=e_ser,
-        db_mb=DB.stat().st_size / 1024 ** 2,
+        db_mb=DB.stat().st_size / 1024 ** 2, db_mtime=DB.stat().st_mtime,
     )
 
 
@@ -334,9 +350,15 @@ def released() -> dict | None:
         return None
     top = rel[0]
     asset = max(top.get("assets") or [], key=lambda a: a["size"], default=None)
+    # 자산이 올라간 시각. 태그가 같아도 그 뒤에 DB가 바뀌었으면 게시본은 낡은 것이다.
+    up = None
+    if asset and asset.get("updated_at"):
+        up = dt.datetime.strptime(asset["updated_at"], "%Y-%m-%dT%H:%M:%SZ")
+        up = up.replace(tzinfo=dt.timezone.utc).timestamp()
     return dict(tag=top["tag_name"], published=top["published_at"][:10],
                 mb=(asset["size"] / 1024 ** 2) if asset else 0.0,
-                name=asset["name"] if asset else "")
+                name=asset["name"] if asset else "",
+                uploaded=up, tags=[x["tag_name"] for x in rel])
 
 
 def block_ver(s: dict, rel: dict | None) -> str:
@@ -373,16 +395,37 @@ def main() -> None:
         print("\n  [알림] 게시된 릴리스를 확인하지 못했다(망 문제일 수 있다). "
               "배지는 로컬 기준으로 적었다.")
     else:
-        want = f"v1.0-{s['hi'].replace('.', '')}"
+        base = f"v1.0-{s['hi'].replace('.', '')}"
+        # 자료 범위가 같아도 그 뒤에 표가 늘거나 마트를 다시 내면 게시본은 낡는다.
+        # 실제로 그랬다 — 2026-08-30에 올린 v1.0-202607에는 다음 날 넣은
+        # fact_temper가 없다. 태그만 견주면 이 경우를 놓친다.
+        touched = bool(rel["uploaded"]) and s["db_mtime"] > rel["uploaded"]
+        want = base
+        if rel["tag"] == base and touched:
+            # 같은 달 안에서 내용만 바뀌었으면 개정 번호를 올린다.
+            nums = [int(t.rsplit(".", 1)[-1]) for t in rel["tags"]
+                    if t.startswith(base + ".") and t.rsplit(".", 1)[-1].isdigit()]
+            want = f"{base}.{max(nums) + 1 if nums else 1}"
         print(f"\n게시본 {rel['tag']} ({rel['published']}, {rel['name']} "
               f"{rel['mb']:,.0f}MB) | 로컬 기준이면 {want}")
         if rel["tag"] != want:
             draft = ROOT / "docs" / "릴리스_본문.md"
             draft.write_text(release_draft(s, inv, want), encoding="utf-8",
                              newline="\n")
+            # 붙여넣기용으로 본문만 담은 파일도 따로 낸다. 위 초안은 안내와
+            # 태그가 섞여 있어 그대로 복사하면 안 된다.
+            paste = ROOT / "docs" / "릴리스_본문_붙여넣기.md"
+            paste.write_text("\n".join(release_body(s, inv)) + "\n",
+                             encoding="utf-8", newline="\n")
             print("\n" + "!" * 68)
-            print(f"  게시본이 로컬보다 뒤처진다. 사이트는 {s['lo']}~{s['hi']}를 설명하는데")
-            print(f"  Releases에서 받을 수 있는 것은 {rel['tag']}이다.")
+            if want == base:
+                print(f"  게시본이 로컬보다 뒤처진다. 사이트는 {s['lo']}~{s['hi']}를 설명하는데")
+                print(f"  Releases에서 받을 수 있는 것은 {rel['tag']}이다.")
+            else:
+                when = dt.datetime.fromtimestamp(rel["uploaded"])
+                print(f"  자료 범위는 같은데 게시본의 내용이 낡았다. 자산을 올린 것이")
+                print(f"  {when:%Y-%m-%d %H:%M}인데 그 뒤에 DB가 바뀌었다 — 표가 늘었거나")
+                print(f"  마트를 다시 냈다. 받는 사람은 사이트가 설명하는 표를 못 찾는다.")
             print(f"  새 릴리스를 올릴 것 — 절차는 docs/배포자_안내.md, 본문 초안은")
             print(f"  docs/릴리스_본문.md에 있다.")
             print("!" * 68)

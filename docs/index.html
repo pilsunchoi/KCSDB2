@@ -47,6 +47,7 @@
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   h2.h{font-size:1.56rem;margin:2px 0 6px}
   .sub{color:var(--muted);margin:0 0 18px;font-size:.95rem}
+  .sub.lead{color:var(--ink);font-weight:600;font-size:1.02rem}
   h3{font-size:1.02rem;margin:26px 0 8px}
   section[role=tabpanel] > h4{font-size:.97rem;margin:18px 0 6px}
   p{margin:8px 0}
@@ -177,7 +178,7 @@
       <h1>관세청 무역통계 DB</h1>
       <span class="tag">KCSDB2</span>
     </div>
-    <p class="lede">이 데이터베이스는 관세청이 OpenAPI로 공개하는 무역통계를 한데 모아 하나의 파일로 만든 것이다. 본체는 2007년 1월부터 최신 확정월까지의 <a href="https://www.data.go.kr/data/15100475/openapi.do" target="_blank" rel="noopener">품목별 국가별 수출입실적(GW)</a>이고, 여기에 <a href="https://www.data.go.kr/data/15101616/openapi.do" target="_blank" rel="noopener">신성질별 수출입실적</a>(2005년부터, HS 개정에 흔들리지 않는 계열)과 <a href="https://www.data.go.kr/data/15157908/openapi.do" target="_blank" rel="noopener">10일 단위 잠정치 네 계열</a>(월 통계가 나오기 전에 흐름을 읽는 용도)을 더했다. 무엇이 얼마나 들어 있고 어디서 받았는지는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭의 표 전체 목록에 있다. 아래 수치는 DB를 읽어 자동으로 채운 현재값이다.</p>
+    <p class="lede">이 데이터베이스는 관세청이 OpenAPI로 공개하는 무역통계를 한데 모아 하나의 파일로 만든 것이다. 본체는 2007년 1월부터 최신 확정월까지의 <a href="https://www.data.go.kr/data/15100475/openapi.do" target="_blank" rel="noopener">품목별 국가별 수출입실적(GW)</a>이고, 여기에 <a href="https://www.data.go.kr/data/15102109/openapi.do" target="_blank" rel="noopener">성질별 수출입실적</a>(1995년부터, 이 DB에서 가장 긴 계열)과 <a href="https://www.data.go.kr/data/15101616/openapi.do" target="_blank" rel="noopener">신성질별 수출입실적</a>(2005년부터, HS 개정에 흔들리지 않는 계열), <a href="https://www.data.go.kr/data/15157908/openapi.do" target="_blank" rel="noopener">10일 단위 잠정치 네 계열</a>(월 통계가 나오기 전에 흐름을 읽는 용도)을 더했다. 무엇이 얼마나 들어 있고 어디서 받았는지는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭의 표 전체 목록에 있다.</p>
   </div>
 </header>
 
@@ -200,11 +201,11 @@
   <!-- ============ 개요 ============ -->
   <section role="tabpanel" id="tab-overview" aria-labelledby="t-overview" class="active">
     <h2 class="h">개요</h2>
-    <p class="sub">이 DB가 무엇을 담고, 어떤 설계 원칙 위에 서 있는지.</p>
+    <p class="sub lead">이 DB가 무엇을 담고, 어떤 설계 원칙 위에 서 있는지를 소개한다.</p>
 
     <div class="panel">
-      <p><b>무엇인가.</b> 관세청 무역통계 원본을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 담은 실적은 넷이다 — <b>국가 × HS10 × 월</b>(2007~), <b>신성질별 × 국가 × 월</b>(2005~), <b>국가 × 월 총계</b>, <b>10일 단위 잠정치 네 계열</b>(2016~). 여기에 계산해 둔 지표(mart)가 더해진다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다.</p>
-      <p><b>왜 만들었나.</b> 관세청 OpenAPI는 조회 조건을 나누어 받아야 하고, 개발계정 기준 하루 1만 회의 호출 한도가 있다. 이 DB를 채우는 데도 엿새에 걸쳐 5만 회를 넘겨 호출했고 원응답은 수 기가바이트였다. 여기에 중간에 바뀐 품목코드를 이어 붙이는 작업이 더해진다. 국제 협약에 따른 HS 개정이 세 번(2012·2017·2022), 국내 품목분류 개정이 두 번(2025·2026) 있었다. 6자리 연결은 관세청 공식 연계표로, 10자리 연결은 기재부 고시 별표에서 직접 만들어 넣었다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭). 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
+      <p><b>무엇인가.</b> 관세청 무역통계 원본을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 담은 실적은 다섯이다 — <b>국가 × HS10 × 월</b>(2007~), <b>성질별 × 월</b>(1995~), <b>신성질별 × 국가 × 월</b>(2005~), <b>국가 × 월 총계</b>, <b>10일 단위 잠정치 네 계열</b>(2016~). 여기에 계산해 둔 지표(mart)가 더해진다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다. (DuckDB와 SQL이 무엇인지, fact와 dim으로 나눈 표 구조가 무엇인지는 <a href="#" onclick="showTab('research');return false">연구</a> 탭의 <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/chapters/chapter06/chapter06.md#3-데이터베이스란-무엇인가" target="_blank" rel="noopener">Chapter 6 「데이터베이스 구축 과정」</a>에 설명이 나와 있다.)</p>
+      <p><b>왜 만들었나.</b> 관세청 OpenAPI는 한 번의 호출에 한 달, 한 나라의 실적만 돌려주고, 개발계정 기준 하루 1만 회의 호출 한도가 있다. 이 DB를 채우는 데도 엿새에 걸쳐 5만 회를 넘겨 호출했고 원응답은 수 기가바이트였다 — XML은 줄마다 필드 이름을 되풀이하고 숫자까지 글자로 담는 형식이라 그렇다. 같은 내용을 DuckDB가 열 단위 이진 형식으로 압축해 담으면 몇백 MB로 줄어든다. 여기에 중간에 바뀐 품목코드를 이어 붙이는 작업이 더해진다. 이 DB가 커버하는 기간에 국제 협약에 따른 HS 개정이 세 번(2012·2017·2022), 국내 품목분류 개정이 두 번(2025·2026) 있었다. 시작점인 2007년 1월도 그해 개정으로 바뀐 체계여서, 2011년까지의 코드는 현행과 다른 판본(HS2007)이다. 6자리 연결은 관세청 공식 연계표로, 10자리 연결은 기재부 고시 별표에서 직접 만들어 넣었다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭). 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
       <p><b>누구를 위한 것인가.</b> 무역 데이터를 받아 직접 분석하려는 연구자가 주 독자다. 로컬 주피터 노트북에서 읽어 쓰는 것을 전제로 한다. 받아서 쓰는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭에 있다.</p>
     </div>
 
@@ -221,7 +222,7 @@
     <p>이 DB의 모든 결정은 하나의 최상위 원칙에서 나온다 — <b>DB는 관세청 원본을 최대한 그대로 담고, 분석을 위한 가공은 DB가 아니라 분석 계층에서 한다.</b> 이 원칙을 세 문장으로 압축하면 다음과 같다.</p>
     <ol class="principle">
       <li><b>fact(사실 테이블)는 관세청 API 응답 필드만 담는다.</b> 연·월을 따로 쪼갠 컬럼, HS 코드를 잘라 만든 상위 코드(hs2·hs4·hs6), 국명·품목명 같은 것은 원본에 없는 <em>파생값</em>이므로 fact에 넣지 않는다. 이런 값이 필요하면 아래 dim 테이블과 조인해서 얻는다. fact를 원본 그대로 두어야 나중에 어떤 분석이 와도 왜곡 없이 출발할 수 있다.</li>
-      <li><b>관측값을 변형하지 않는다.</b> 관세청이 준 값은 그대로 저장한다 — 금액 0, 음수 중량(사후 정정), 초기 연도의 후행 공백까지 손대지 않는다. "이상해 보이니 고친다"가 아니라 "원본이 그러하니 보존한다"가 기준이다. 이상치 판단과 처리는 분석하는 연구자의 몫으로 남긴다.</li>
+      <li><b>관측값을 변형하지 않는다.</b> 관세청이 준 값은 그대로 저장한다 — 금액 0, 음수 중량(반품·수정신고로 뒤늦게 상계한 값), 초기 연도의 후행 공백까지 손대지 않는다. "이상해 보이니 고친다"가 아니라 "원본이 그러하니 보존한다"가 기준이다. 이상치 판단과 처리는 분석하는 연구자의 몫으로 남긴다.</li>
       <li><b>연결과 참조는 dim(차원 테이블)이 담당한다.</b> 시간이 지나며 바뀌는 HS 품목코드의 개정 연결(6자리와 10자리 두 층위), 국가코드에 붙는 표준 국명·ISO·대륙, HS10에 붙는 품목명·단위는 모두 dim 테이블이 제공한다. fact는 raw로 두고, "무엇과 무엇을 잇는가"는 dim에서 처리한다. 매 분석마다 반복하던 연결 작업을 DB 계층에서 한 번에 끝내는 것이 핵심이다. 다만 <b>공표된 자료를 옮긴 것</b>(HS6 연계)과 <b>우리가 추정한 것</b>(HS10 연계)은 테이블을 나누어 성격을 구분한다.</li>
     </ol>
 
@@ -235,7 +236,7 @@
   <!-- ============ DB 구축 ============ -->
   <section role="tabpanel" id="tab-build" aria-labelledby="t-build">
     <h2 class="h">DB 구축</h2>
-    <p class="sub">계층 분리 · 스키마 · HS6 연결 · 커버리지 · 검증.</p>
+    <p class="sub lead">계층을 어떻게 나누었고 스키마를 어떻게 짰는지, HS 개정을 어떻게 연결했고 커버리지와 검증은 어디까지 확인했는지 밝힌다.</p>
 
     <h3>계층 분리</h3>
     <div class="panel">
@@ -255,7 +256,7 @@
     </div>
 
     <h3>fact 스키마 (관세청 raw)</h3>
-    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. <b>네 종류</b>가 있다. <code>fact_trade</code>는 <b>국가 × HS10 품목 × 월</b> 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 <b>국가 × 월</b>로 합산된 총계 행이다. <code>fact_nqi</code>는 같은 통관 실적을 <b>신성질별 × 국가 × 월</b>로 관세청이 직접 집계한 것으로, HS 개정에 흔들리지 않는 계열이 필요할 때 쓴다(이 표만 2005년부터다). 넷째 <code>fact_exp10d</code>는 다른 API에서 오는 <b>10일 단위</b> 잠정치로, 수출·수입 각각의 주요품목별과 주요국가별 <b>네 계열</b>이 <code>series</code> 열로 갈려 담긴다. 월 자료보다 훨씬 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 넷 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
+    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. <b>다섯 종류</b>가 있다. <code>fact_trade</code>는 <b>국가 × HS10 품목 × 월</b> 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 <b>국가 × 월</b>로 합산된 총계 행이다. <code>fact_nqi</code>는 같은 통관 실적을 <b>신성질별 × 국가 × 월</b>로 관세청이 직접 집계한 것으로, HS 개정에 흔들리지 않는 계열이 필요할 때 쓴다(이 표만 2005년부터다). 넷째 <code>fact_temper</code>는 같은 실적을 <b>성질별 × 월</b>로 집계한 것으로, 10일 자료의 10대 품목이 이 분류로 정의된다(이 표만 1995년부터다). 다섯째 <code>fact_exp10d</code>는 다른 API에서 오는 <b>10일 단위</b> 잠정치로, 수출·수입 각각의 주요품목별과 주요국가별 <b>네 계열</b>이 <code>series</code> 열로 갈려 담긴다. 월 자료보다 훨씬 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 다섯 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
     <div class="tblwrap">
       <table>
         <caption>fact_trade — 거래 행 (국가 × HS10 × 월), 8필드</caption>
@@ -287,7 +288,70 @@
     </div>
     <p class="sub">총계 행은 응답에 국가코드가 없어 stat_cd를 파일명에서 추출한다 — 이것이 DB 전체에서 유일하게 허용하는 파생이다.</p>
 
-    <p>세 번째 fact는 성격이 다르다. <code>fact_exp10d</code>는 관세청이 상순분을 11일, 중순분을 21일, 월 전체를 익월 1일에 내는 <b>10일 단위 잠정치</b>다(2016.01부터). 네 계열이 함께 들어 있다 — <code>exp_item</code>(수출 주요품목별), <code>exp_cnty</code>(수출 주요국가별), <code>imp_item</code>(수입 주요품목별), <code>imp_cnty</code>(수입 주요국가별). 월 자료가 나오기 전에 방향을 읽을 수 있다는 것이 값어치이고, 대신 각 계열이 열 항목과 총계뿐이며 중량이 없다. <b>뷰를 쓸 때 <code>series</code>를 반드시 걸러야 한다</b> — 안 그러면 품목과 국가가 섞여 총계가 두 배가 된다. 값은 <b>누적치</b>(1~10일, 1~20일, 1~말일)이고 단위는 천 달러이며, 원본 그대로 담는다. 구간 증분과 억 달러 환산은 뷰 <code>v_exp10d_seg</code>가 맡는다.</p>
+    <p><b>셋째 fact는 분류 체계가 다르다.</b> <code>fact_nqi</code>는 같은 통관 실적을 HS가 아니라 관세청 <b>신성질별</b>로 집계한 것이다. HS 컬럼이 없고 그 자리에 <code>nqi5</code>(세세분류 코드)가 온다. 응답은 수출과 수입이 세로로 나뉘어 오는데(<code>impexp</code> 필드) <code>fact_trade</code>와 같은 가로 형태로 돌려 담았다 — 값은 그대로이고 모양만 바꾼 것이다. <code>bal_payments</code>는 응답에 없어 담지 않는다.</p>
+    <div class="tblwrap">
+      <table>
+        <caption>fact_nqi — 신성질별 × 국가 × 월, 7필드 (HS 컬럼 없음)</caption>
+        <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><code>yyyymm</code></td><td>응답 year</td><td>응답이 <code>2026.01</code> 꼴. 점만 제거</td></tr>
+          <tr><td><code>stat_cd</code></td><td>응답 statCd</td><td>관세청 원본. 폐지·불명 코드 15개는 <code>dim_country</code>에 없다</td></tr>
+          <tr><td><code>nqi5</code></td><td>응답 godsCd</td><td>신성질별 세세분류 8자리. 이름·계층은 <code>dim_nqi</code>가 준다</td></tr>
+          <tr><td><code>exp_dlr / imp_dlr</code></td><td>응답 dlr</td><td>금액. <code>impexp</code>로 갈라 두 컬럼에 담는다</td></tr>
+          <tr><td><code>exp_wgt / imp_wgt</code></td><td>응답 wgt</td><td>중량. 데이터셋 설명과 달리 실제로 들어 있다</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note">
+      <b>신성질별은 무엇이 다른가.</b>
+      HS는 물건이 <b>무엇인지</b>로 나눈다 — 재료와 가공도를 따라 장(chapter)이 편성된다.
+      신성질별은 그 물건이 경제에서 <b>어떤 쓰임인지</b>로 나눈다.
+      꼭대기에 <b>소비재·원자재·자본재</b> 셋이 있고 그 아래로 중(14)·소(68)·세(303)·세세(758)로 갈린다.
+      메모리반도체는 <code>3.자본재 &gt; 1)반도체 &gt; 34010101</code>로 분류된다.
+      두 체계의 경계는 서로 어긋난다 — 우리 자료에 나오는 HS 96개 장 가운데 <b>36개가 대분류 둘 이상에 걸친다</b>.
+      쓰임이 갈리는 자리가 물건의 종류와 다르기 때문이다.
+      2025년 수출을 이 셋으로 가르면 자본재 4,213억, 원자재 1,913억, 소비재 968억 달러다.
+    </div>
+
+    <p><b>넷째 fact는 기간이 가장 길다.</b> <code>fact_temper</code>는 같은 실적을 관세청
+      <b>성질별</b>로 집계한 것으로 <b>1995년 1월부터</b> 있다 — <code>fact_trade</code>보다
+      열두 해, <code>fact_nqi</code>보다 열 해 앞선다. 이 표를 받은 이유는 따로 있다.
+      10일 잠정치의 10대 품목이 바로 이 분류의 마디로 정의되어 있어, 부호를 묶으면
+      <b>10일 자료를 품목 단위로 맞대 볼 수 있는 유일한 계열</b>이 된다.
+      <b>수출과 수입은 부호 체계가 서로 다르다</b> — 수출 153개, 수입 181개이고 나무가
+      아예 달라 같은 부호 <code>11201</code>이 수출에서는 기타 육류, 수입에서는 쌀이다.
+      그래서 <code>fact_nqi</code>처럼 가로로 눕히지 않고 <code>imexp</code>를 키에 둔
+      세로 형태로 담는다.</p>
+    <div class="tblwrap">
+      <table>
+        <caption>fact_temper — 방향 × 성질부호 × 월, 5필드 (세로 형태)</caption>
+        <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td><code>yyyymm</code></td><td>응답 year</td><td>응답이 <code>2026.01</code> 꼴. 점만 제거</td></tr>
+          <tr><td><code>imexp</code></td><td>응답 impexp</td><td><code>수출</code> / <code>수입</code>. <b>키의 일부다</b> — 부호 체계가 방향마다 다르다</td></tr>
+          <tr><td><code>temper_cd</code></td><td>응답 godsCd</td><td>성질부호. 이름·계층·10대 품목 꼬리표는 <code>dim_temper</code>가 준다</td></tr>
+          <tr><td><code>dlr</code></td><td>응답 dlr</td><td>금액</td></tr>
+          <tr><td><code>wgt</code></td><td>응답 wgt</td><td>중량</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <b>성질별과 신성질별은 무엇이 다른가.</b>
+      이름이 한 글자 차이라 헷갈리지만 별개 분류다. 둘 다 물건의 쓰임으로 나누는 것은 같고,
+      갈리는 자리가 셋이다.
+      첫째, <b>성질별은 수출과 수입이 서로 다른 나무다</b> — 수출 153부호는 식료및직접소비재·원료및연료·경공업품·중화학공업품
+      넷에서 뻗고, 수입 181부호는 소비재·원자재·자본재 셋에서 뻗는다.
+      그래서 같은 부호 <code>11201</code>이 수출에서는 기타 육류, 수입에서는 쌀이다.
+      신성질별은 방향과 무관한 하나의 체계이고 세세분류가 758개다.
+      둘째, <b>성질별은 해상도가 낮은 대신 10대 품목과 정의가 같다</b>. 그래서 10일 자료를 품목 단위로
+      맞대 볼 수 있다.
+      셋째, <b>성질별이 열 해 더 길다</b>(1995년 대 2005년). 대신 우리 DB에서 국가 축을 갖는 쪽은 신성질별이다.
+      요컨대 10대 품목을 맞대거나 긴 시계열이 필요하면 <code>fact_temper</code>, 경기 민감도나 목적지별 분석이면
+      <code>fact_nqi</code>를 쓴다.
+    </div>
+
+    <p><b>다섯째 fact는 성격이 다르다.</b> <code>fact_exp10d</code>는 관세청이 상순분을 11일, 중순분을 21일, 월 전체를 익월 1일에 내는 <b>10일 단위 잠정치</b>다(2016.01부터). 네 계열이 함께 들어 있다 — <code>exp_item</code>(수출 주요품목별), <code>exp_cnty</code>(수출 주요국가별), <code>imp_item</code>(수입 주요품목별), <code>imp_cnty</code>(수입 주요국가별). 월 자료가 나오기 전에 방향을 읽을 수 있다는 것이 값어치이고, 대신 각 계열이 열 항목과 총계뿐이며 중량이 없다. <b>뷰를 쓸 때 <code>series</code>를 반드시 걸러야 한다</b> — 안 그러면 품목과 국가가 섞여 총계가 두 배가 된다. 값은 <b>누적치</b>(1~10일, 1~20일, 1~말일)이고 단위는 천 달러이며, 원본 그대로 담는다. 구간 증분과 억 달러 환산은 뷰 <code>v_exp10d_seg</code>가 맡는다. <b>열 항목은 바로 위 신성질별이 아니다</b> — 관세청 <b>현행 수출 성질별</b> 분류에서 따온 것이고, 그것도 한 계층이 아니라 철강제품은 3단위, 반도체·석유제품·가전제품은 소분류, 나머지는 세분류에서 딴다. 두 분류는 같은 엑셀(<code>15049720</code>)에 나란히 들어 있어 헷갈리기 쉽다. 이름이 겹치는 것은 반도체와 선박뿐이고 승용차·자동차부품 같은 이름은 신성질별에 아예 없다.</p>
 
     <p class="sub">fact_exp10d 16,852행(계열당 4,213행). 이 자료는 <b>같은 시점을 여러 번 관측한다</b> — 당월은 잠정이고 전월까지는 신고 정정·취하를 반영해 갱신되기 때문이다. 그래서 값이 바뀔 때마다 새 행을 쌓고 <code>fetched_at</code>으로 구분한다. 나중에 "그때 알 수 있었던 값"으로 예측 성능을 정직하게 재려면 이 이력이 있어야 한다. 값이 그대로면 행을 만들지 않는다.</p>
 
@@ -317,6 +381,7 @@
           <tr><td><code>dim_nqi</code></td><td>nqi5</td><td>관세청 신성질별 분류 758개(세세분류)와 대·중·소·세 계층. 2012년 제정 후 코드 체계가 유지돼 HS 개정에 흔들리지 않는다. <b>관세청 공표</b></td></tr>
           <tr><td><code>dim_hs10_to_nqi</code></td><td>(hs10, nqi5)</td><td>HS10 → 신성질별. weight·method(direct / chain). 현행 코드는 공표 대응표 그대로, 폐지 코드는 dim_hs10_to_2022로 이어 붙였다</td></tr>
           <tr><td><code>dim_hs10_to_major10</code></td><td>(hs10, item)</td><td>HS10 → 10대 수출품목(반도체·승용차 등). <b>현행 수출 성질별</b> 기준이며 관세청 공표치와 대조해 확정했다</td></tr>
+          <tr><td><code>dim_temper</code></td><td>(방향, 성질부호)</td><td>성질별 부호 334개(수출 153·수입 181)의 이름과 4단 계층, 그리고 10대 품목 꼬리표. 이름은 API 응답에서 와 폐지부호까지 담는다. <b>관세청 공표</b></td></tr>
           <tr><td><code>dim_workday10d</code></td><td>(base_ym, cutoff)</td><td>상순·중순·하순의 일수와 조업일수. 10일 단위 자료를 견주려면 반드시 필요하다 — 상순 조업일수가 1~8일로 여덟 배까지 벌어진다. <b>KASI 특일정보 검증 달력</b></td></tr>
         </tbody>
       </table>
@@ -377,6 +442,7 @@
           <tr><td><code>fact_trade</code></td><td>국가 × HS10 품목 × 월 수출입 실적. 이 DB의 본체</td><td class="r">28,093,109</td><td class="s">2007.01–2026.07</td><td class="s">관세청 품목별 국가별 수출입실적(GW) · 공공데이터포털 15100475</td></tr>
           <tr><td><code>fact_total</code></td><td>품목 구분 없는 국가 × 월 총계</td><td class="r">57,105</td><td class="s">2007.01–2026.07</td><td class="s">관세청 품목별 국가별 수출입실적(GW) · 15100475 (총계 응답)</td></tr>
           <tr><td><code>fact_nqi</code></td><td>신성질별 × 국가 × 월 수출입 실적. 관세청이 직접 집계한 공식치라 HS 개정 추정이 섞이지 않는다. <b>이 표만 2005년부터다</b></td><td class="r">6,567,873</td><td class="s">2005.01–2026.07</td><td class="s">관세청 신성질별 수출입실적(GW) · 15101616</td></tr>
+          <tr><td><code>fact_temper</code></td><td>성질별 × 월 수출입 실적. 관세청 공식치이고 <b>이 표만 1995년부터</b>다. 10일 자료의 10대 품목이 이 분류로 정의되어, 품목 단위로 맞대 볼 수 있는 유일한 계열이다. 수출과 수입은 부호 체계가 서로 다르다</td><td class="r">123,965</td><td class="s">1995.01–2026.07</td><td class="s">관세청 성질별 수출입실적(GW) · 15102109</td></tr>
           <tr><td><code>fact_exp10d</code></td><td>10일 단위 잠정치 네 계열(수출·수입 × 주요품목·주요국가). 값이 바뀔 때마다 새 행을 쌓아 관측 이력을 남긴다</td><td class="r">16,852</td><td class="s">2016.01–2026.08</td><td class="s">관세청 10일 단위 잠정치 · 15157908·15157941·15157901·15157909</td></tr>
           <tr class="grp"><td colspan="5">dim — 코드에 이름과 연결을 붙이는 참조</td></tr>
           <tr><td><code>dim_country</code></td><td>국가코드에 관세청 국명과 외교부 표준명·ISO2/3·대륙을 병기</td><td class="r">240</td><td class="s">—</td><td class="s">관세청 + 외교부 국가표준코드 · 15091117</td></tr>
@@ -388,6 +454,7 @@
           <tr><td><code>dim_nqi</code></td><td>신성질별 분류의 대·중·소·세·세세 5단 계층과 이름</td><td class="r">758</td><td class="s">—</td><td class="s">관세청 신성질별 분류 · 15049720</td></tr>
           <tr><td><code>dim_hs10_to_nqi</code></td><td>HS10 → 신성질별. 현행 코드는 공표 대응, 폐지 코드는 추정 경유</td><td class="r">17,365</td><td class="s">—</td><td class="s">관세청 15049720 + 이 저장소 추정</td></tr>
           <tr><td><code>dim_hs10_to_major10</code></td><td>HS10 → 수출 10대 품목. 관세청 공표치와 대조해 확정</td><td class="r">2,544</td><td class="s">—</td><td class="s">관세청 15049720 + 공표치 대조</td></tr>
+          <tr><td><code>dim_temper</code></td><td>성질별 부호의 이름과 4단 계층, 그리고 10대 품목 꼬리표. 이름은 API 응답에서 와 폐지부호까지 담고, 계층은 별표에서 온다</td><td class="r">334</td><td class="s">—</td><td class="s">관세청 성질별 수출입실적 15102109 + 신성질별 분류 15049720</td></tr>
           <tr><td><code>dim_workday10d</code></td><td>상순·중순·하순의 일수와 조업일수. 10일 자료를 견주려면 필요하다</td><td class="r">753</td><td class="s">2007.01–2027.11</td><td class="s">한국천문연구원 특일정보 API로 대조한 공휴일 달력</td></tr>
           <tr class="grp"><td colspan="5">mart — 이 저장소가 계산한 지표</td></tr>
           <tr><td><code>mart_exp10d_metrics</code></td><td>10일 자료 지표 — 조업일수 보정 전년 대비, 비중, 기여도, 진도율</td><td class="r">18,384</td><td class="s">2016.01–2026.08</td><td class="s">이 저장소가 계산</td></tr>
@@ -402,7 +469,7 @@
         </tbody>
       </table>
     </div><!-- DB_INVENTORY:END -->
-    <p class="sub">기간이 표마다 다르다. 월 실적(<code>fact_trade</code>)은 2007년부터, 신성질별 공식 실적(<code>fact_nqi</code>)은 <b>2005년</b>부터, 10일 단위 잠정치는 2016년부터, 조업일수 달력은 <b>2027년까지</b> 미리 만들어 두었다.</p>
+    <p class="sub">기간이 표마다 다르다. 월 실적(<code>fact_trade</code>)은 2007년부터, 신성질별 공식 실적(<code>fact_nqi</code>)은 2005년부터, 성질별 공식 실적(<code>fact_temper</code>)은 <b>1995년</b>부터, 10일 단위 잠정치는 2016년부터, 조업일수 달력은 <b>2027년까지</b> 미리 만들어 두었다.</p>
 
     <h3>어디서 받았나</h3>
     <p>원천은 공공데이터포털의 관세청 OpenAPI가 중심이고, 여기에 분류·달력 자료가 더해진다. 모두 무료이며 활용신청은 자동승인이다(<code>15049720</code>은 신청도 필요 없다). 아래 표의 번호가 공공데이터포털 데이터셋 번호다.</p>
@@ -413,6 +480,7 @@
         <tbody>
           <tr><td>관세청 품목별 국가별 수출입실적(GW)</td><td><code>15100475</code></td><td>fact_trade · fact_total</td><td>월×국가 전수 호출. 엿새에 걸쳐 5만 회를 넘겼다</td></tr>
           <tr><td>관세청 신성질별 수출입실적(GW)</td><td><code>15101616</code></td><td>fact_nqi</td><td>엔드포인트 <code>newtempertrade</code>. 필수 변수 <code>imexTpcd</code>(1=수출/2=수입). 연 단위로 44회면 끝난다</td></tr>
+          <tr><td>관세청 성질별 수출입실적(GW)</td><td><code>15102109</code></td><td>fact_temper · dim_temper</td><td>엔드포인트 <code>Idfytempertrade</code>. 연 단위로 64회면 끝난다. <b>1995년부터</b>다</td></tr>
           <tr><td>관세청 수출·수입 10일 단위 잠정치</td><td><code>15157908</code> <code>15157941</code><br><code>15157901</code> <code>15157909</code></td><td>fact_exp10d</td><td>주요품목별·주요국가별 각 수출입. 응답에 항목 이름이 없어 순서를 보도자료와 대조해 확정했다</td></tr>
           <tr><td>관세청 HS부호</td><td><code>15049722</code></td><td>dim_hs10</td><td>품목명·단위·적용시작일</td></tr>
           <tr><td>관세청 신성질별 분류</td><td><code>15049720</code></td><td>dim_nqi · dim_hs10_to_nqi · dim_hs10_to_major10</td><td>신청 불요·연간 갱신</td></tr>
@@ -424,7 +492,7 @@
       </table>
     </div>
     <div class="note">
-      <b>같은 무역을 두 번 담는다 — 알고 쓰는 것이 좋다.</b> <code>fact_trade</code>(HS10×국가)와 <code>fact_nqi</code>(신성질별×국가)는 같은 통관 실적을 서로 다른 분류로 집계한 것이다. 둘을 더하면 안 된다. HS10 해상도가 필요하면 앞쪽을, HS 개정에 흔들리지 않는 계열이 필요하면 뒤쪽을 쓴다. <code>fact_nqi</code>를 따로 받아 둔 이유는 <b>우리가 HS10에서 신성질별로 환산한 값이 옛 연도에서 정확하지 않기 때문</b>이다 — 총액은 맞지만 세세분류 배분이 2007년 25%, 2017년 5% 어긋나고 2022년부터야 0.3%로 떨어진다. 그 대조를 <code>mart_nqi_check</code>가 월별로 남긴다.
+      <b>같은 무역을 세 분류로 담는다 — 알고 쓰는 것이 좋다.</b> <code>fact_trade</code>(HS10×국가)와 <code>fact_nqi</code>(신성질별×국가), <code>fact_temper</code>(성질별)는 같은 통관 실적을 서로 다른 분류로 집계한 것이다. 셋을 더하면 안 된다. HS10 해상도가 필요하면 첫째를, HS 개정에 흔들리지 않는 계열이 필요하면 둘째를, 10일 자료와 품목을 맞대거나 1995년까지 거슬러야 하면 셋째를 쓴다. <code>fact_nqi</code>를 따로 받아 둔 이유는 <b>우리가 HS10에서 신성질별로 환산한 값이 옛 연도에서 정확하지 않기 때문</b>이다 — 총액은 맞지만 세세분류 배분이 2007년 25%, 2017년 5% 어긋나고 2022년부터야 0.3%로 떨어진다. 그 대조를 <code>mart_nqi_check</code>가 월별로 남긴다.
     </div>
 
     <h3>커버리지</h3>
@@ -466,7 +534,7 @@
   <!-- ============ HS 연계 ============ -->
   <section role="tabpanel" id="tab-link" aria-labelledby="t-link">
     <h2 class="h">HS 연계</h2>
-    <p class="sub">개정으로 끊긴 품목 시계열을 잇는 일 — 6자리는 공표된 사실, 10자리는 추정.</p>
+    <p class="sub lead">개정으로 끊긴 품목 시계열을 어떻게 이었는지 밝힌다. 6자리는 공표된 사실이고, 10자리는 우리가 만든 추정이다.</p>
 
     <h3>왜 필요한가</h3>
     <div class="panel">
@@ -631,7 +699,7 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
   <!-- ============ 데이터 함정 ============ -->
   <section role="tabpanel" id="tab-traps" aria-labelledby="t-traps">
     <h2 class="h">데이터 함정</h2>
-    <p class="sub">DB를 만들며 실측으로 확인한, 모르고 쓰면 결과를 틀리게 만드는 지점들.</p>
+    <p class="sub lead">DB를 만들며 실측으로 확인한, 모르고 쓰면 결과를 틀리게 만드는 지점들을 모았다.</p>
     <div class="panel" style="margin-top:0">
       <p>"함정"은 DB의 버그가 아니다. 대부분은 관세청 원본 데이터 자체의 특성이거나, 분석할 때 짚고 넘어가야 하는 주의점이다. 이 DB는 원본을 그대로 보존하는 것이 원칙이므로 이런 값들을 임의로 고치지 않는다 — 대신 여기에 미리 목록으로 드러내, 분석하는 연구자가 각자 상황에 맞게 처리하도록 한다. 아래 카드마다 <b>무엇이 문제이고, 왜 그런지, 어떻게 대응하는지</b>를 담았다.</p>
     </div>
@@ -697,7 +765,7 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
   <!-- ============ 받기·사용 ============ -->
   <section role="tabpanel" id="tab-use" aria-labelledby="t-use">
     <h2 class="h">받기·사용</h2>
-    <p class="sub">DB를 받아 로컬 주피터에서 분석하려는 연구자를 위한 안내.</p>
+    <p class="sub lead">DB를 받아 로컬 주피터에서 분석하려는 연구자에게 필요한 것을 안내한다.</p>
 
     <p><b>먼저 알아둘 것 — 받을 것이 둘로 나뉜다.</b> 이 DB는 두 부분으로 배포된다. 하나는 <b>분석 코드·노트북·폴더 구조</b>가 담긴 GitHub <b>저장소</b>이고, 다른 하나는 <b>DB 파일 자체</b>(<code>kcsdb.duckdb</code>)다. DB 파일은 용량이 커서 GitHub 저장소에 넣을 수 없기 때문에(100MB 한도), <b>저장소는 clone으로 받고 DB 파일은 Releases에서 따로 받아</b> 저장소 안 정해진 자리에 놓는 방식이다.</p>
     <p>전체 흐름은 네 단계다 — <b>패키지 설치 → 저장소 받기 → DB 파일 받아 배치 → 주피터에서 열기</b>. DB를 재구축하는 것이 아니라 이미 만들어진 DB를 받아 분석만 하므로 준비물은 가볍다(파이썬 패키지 4개). 순서대로 따라 하면 된다.</p>
@@ -746,6 +814,7 @@ con.close()</code></pre>
       <b>단위 표기.</b> 금액은 미화 달러(USD) — 수출 FOB·수입 CIF 기준. 중량은 순중량 kg.<br>
       <b>범위 경계.</b> 월 실적은 최신 확정월까지이고 마지막 해는 부분년이므로 연도끼리 견줄 때는 제외한다. 정확한 범위는 <code>SELECT MIN(yyyymm), MAX(yyyymm) FROM fact_trade</code>로 확인한다.<br>
       <b>개정 경계.</b> 2012·2017·2022년 1월에 HS 품목코드가 바뀌고, 그 사이에도 국내 품목분류 개정이 있다(2025·2026년 1월). 이 경계를 넘는 시계열은 <code>dim_hs6_concordance</code>(6자리) 또는 <code>dim_hs10_to_2022</code>(10자리)로 이어야 하며, 그냥 코드가 같은지만 보면 계열이 끊긴다. 개정에 아예 흔들리지 않는 분류가 필요하면 <code>dim_hs10_to_nqi</code>(관세청 신성질별)를 쓴다 — 대신 758개로 해상도가 낮다. 쓰는 법은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭에 있다.<br>
+      <b>다른 분류의 공식 집계.</b> 같은 통관 실적을 관세청이 다른 분류로 집계해 둔 것도 두 계열 들어 있다 — <code>fact_temper</code>(성질별, 1995~)와 <code>fact_nqi</code>(신성질별 × 국가, 2005~)다. HS 개정과 무관하고 <code>fact_trade</code>보다 기간이 길다. <b>같은 무역이므로 서로 더하면 안 된다.</b> 둘의 차이는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭에 있다.<br>
       <b>10일 단위 자료.</b> 월 실적 말고도 10일 단위 잠정치(<code>fact_exp10d</code>, 뷰 <code>v_exp10d_seg</code>)가 들어 있다. 수출·수입 각각의 주요품목별·주요국가별 네 계열이며 <code>series</code>로 가른다. 월 통계보다 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 무엇이 얼마나 들어 있고 어디서 받았는지는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭의 <b>표 전체 목록</b>에 있다 — 행수와 기간은 DB를 읽어 자동으로 채운다.
     </div>
 
@@ -756,7 +825,7 @@ con.close()</code></pre>
   <section role="tabpanel" id="tab-research" aria-labelledby="t-research">
     <div class="mono">
       <h2 class="h">연구</h2>
-      <p class="sub">관세청 무역통계 DB 위에서 수행하는 분석 챕터. 각 챕터는 렌더된 문서(Markdown·표·그림)와 그 결과를 재현하는 노트북으로 연결된다.</p>
+      <p class="sub lead">관세청 무역통계 DB 위에서 수행하는 분석 챕터를 모았다. 각 챕터는 렌더된 문서(Markdown·표·그림)와 그 결과를 재현하는 노트북으로 연결된다.</p>
       <div class="note">여섯 챕터 모두 이 DB 위에서 수행한 실제 분석이다. 시연은 방법 예시이지 분석 방향(연구 결론)이 아니다 — 이 DB는 특정 분석을 전제하지 않는다.</div>
 
       <article class="mono-card">
@@ -900,7 +969,7 @@ con.close()</code></pre>
 <footer>
   <div class="wrap">
     <span class="ver"><!-- DB_VERSION:START -->내려받기 v1.0-202607 · 2026-08-30 게시<!-- DB_VERSION:END --></span>
-    <p><b>출처 표시 (공공누리 제1유형).</b> 관세청 HS부호(data.go.kr, 15049722) 및 관세청 FTA 포털 HS연계표는 공공누리 제1유형(출처표시)으로 개방된 저작물이다. 외교부 국가표준코드(15091117), 관세청 품목별 국가별 수출입실적(GW)(15100475), 기획재정부 고시 「관세ㆍ통계통합품목분류표」 별표(법제처 국가법령정보센터)를 함께 이용하였다.</p>
+    <p><b>출처 표시 (공공누리 제1유형).</b> 관세청 HS부호(data.go.kr, 15049722) 및 관세청 FTA 포털 HS연계표는 공공누리 제1유형(출처표시)으로 개방된 저작물이다. 외교부 국가표준코드(15091117), 관세청 품목별 국가별 수출입실적(GW)(15100475), 관세청 성질별 수출입실적(GW)(15102109), 관세청 신성질별 수출입실적(GW)(15101616), 관세청 HSK별 신성질별·성질별 분류(15049720), 관세청 수출·수입 10일 단위 잠정치 통계(15157908·15157941·15157901·15157909), 기획재정부 고시 「관세ㆍ통계통합품목분류표」 별표(법제처 국가법령정보센터)를 함께 이용하였다.</p>
     <p><b>추정 표시.</b> <code>dim_hs10_concordance</code>와 <code>dim_hs10_to_2022</code>는 공표된 연계표가 아니라 위 고시 별표에서 이 DB가 추정한 연결이다. 관세청·기획재정부의 공식 판단이 아니다.</p>
     <p>본 저작물은 위 기관들이 개방한 공공데이터를 이용하였으며, 공공기관이 이 DB를 후원하거나 특수 관계에 있는 것으로 오인하게 하는 표시를 하지 않는다.</p>
   </div>

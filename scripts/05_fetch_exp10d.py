@@ -39,6 +39,17 @@ endYymm 둘뿐이고 2016년 1월부터 제공된다. 공표는 상순분이 11�
    값이어야 하고 수입도 마찬가지다. 이것을 매번 대조한다 — 번호 대응이 어긋나거나
    한쪽만 갱신되면 여기서 걸린다.
 
+6. **월 전체 총계는 신성질별 공식 실적과도 맞는다.** `fact_nqi`의 월별 합과 대조한다.
+   겹치는 127개월에서 최대 격차가 수출 0.00025%, 수입 0.0000014%였다. 품목으로는
+   내려가지 못한다 — 10대 품목은 **현행 수출 성질별**이라 신성질별과 정의가 다르고,
+   이름이 겹치는 반도체·선박조차 0.3~2% 어긋난다.
+
+7. **품목별 월 전체값은 성질별 공식 실적과 맞는다.** 10대 품목은 현행 수출·수입
+   **성질별** 분류의 마디로 정의되므로 `fact_temper`의 부호를 묶으면 같은 정의의
+   계열이 나온다. 수출 37부호·수입 42부호를 묶어 2,794쌍을 맞대니 최대 격차가
+   0.0001%였다. **이것이 품목 단위로 검증할 수 있는 유일한 경로다** — 신성질별은
+   총액만 맞고 `dim_hs10_to_major10` 경로는 우리 매핑을 재는 것이라 순환이다.
+
 만드는 것
 ---------
 fact_exp10d(series, base_ym, cutoff, priod_dt, item, amt_kusd, fetched_at)
@@ -233,6 +244,59 @@ def check(con: duckdb.DuckDBPyConnection, got: list[str]) -> None:
           SELECT series, base_ym, cutoff, COUNT(*) n FROM v_exp10d_seg
           GROUP BY 1,2,3) WHERE n <> 11""").fetchone()[0]
     assert bad == 0, f"항목이 11개가 아닌 시점이 {bad}개다"
+    # 4. 월 전체 총계는 신성질별 공식 실적(fact_nqi)의 합과 같아야 한다.
+    #    둘 다 관세청 공식 집계라 총액 층위에서는 일치한다. 품목으로는 못 내려간다
+    #    - 10대 품목은 현행 수출 성질별이고 신성질별과 정의가 다르기 때문이다.
+    nqi = con.sql("SELECT COUNT(*) FROM duckdb_tables() "
+                  "WHERE table_name = 'fact_nqi'").fetchone()[0]
+    if nqi:
+        worst = con.sql("""
+            WITH a AS (SELECT base_ym AS ym, series, MAX(amt_kusd) * 1000.0 AS v
+                       FROM fact_exp10d WHERE cutoff = 99
+                         AND item IN ('총수출', '총수입') GROUP BY 1, 2),
+                 n AS (SELECT yyyymm AS ym, SUM(exp_dlr) AS e, SUM(imp_dlr) AS i
+                       FROM fact_nqi GROUP BY 1)
+            SELECT a.series, a.ym,
+                   ABS(a.v / (CASE WHEN a.series LIKE 'exp%' THEN n.e
+                                   ELSE n.i END) - 1) AS rel
+            FROM a JOIN n USING (ym) ORDER BY rel DESC LIMIT 1""").fetchone()
+        if worst:
+            assert worst[2] < 1e-4, (
+                f"{worst[0]} {worst[1]}: 월 전체 총계가 fact_nqi와 "
+                f"{worst[2]:.2%} 어긋난다 - 어느 한쪽의 정정 반영 시점을 의심할 것")
+            print(f"  신성질별 대조: 최대 격차 {worst[2]:.6%} ({worst[0]} {worst[1]})")
+    else:
+        print("  신성질별 대조: fact_nqi가 없어 건너뛴다 (03e/10 먼저 실행)")
+    # 5. 품목별 월 전체값은 성질별 공식 실적(fact_temper)의 롤업과 같아야 한다.
+    #    10대 품목이 현행 수출·수입 성질별 분류의 마디로 정의되어 있어, 부호를
+    #    묶으면 같은 정의의 계열이 나온다. 총계만 재는 4번과 달리 품목까지 잰다.
+    tmp = con.sql("SELECT COUNT(*) FROM duckdb_tables() "
+                  "WHERE table_name = 'fact_temper'").fetchone()[0]
+    if tmp:
+        worst = con.sql("""
+            WITH roll AS (
+                SELECT f.yyyymm, f.imexp, d.major10 AS item, SUM(f.dlr) AS v
+                FROM fact_temper f JOIN dim_temper d USING (imexp, temper_cd)
+                WHERE d.major10 IS NOT NULL GROUP BY 1,2,3),
+            ten AS (
+                SELECT base_ym AS yyyymm,
+                       CASE WHEN series LIKE 'exp%' THEN '수출' ELSE '수입' END AS imexp,
+                       item, MAX(amt_kusd) * 1000.0 AS v
+                FROM fact_exp10d
+                WHERE cutoff = 99 AND series IN ('exp_item', 'imp_item')
+                GROUP BY 1,2,3)
+            SELECT r.yyyymm, r.imexp, r.item,
+                   ABS(r.v / NULLIF(t.v, 0) - 1) AS rel
+            FROM roll r JOIN ten t USING (yyyymm, imexp, item)
+            ORDER BY rel DESC LIMIT 1""").fetchone()
+        if worst:
+            assert worst[3] < 1e-3, (
+                f"{worst[1]} {worst[2]} {worst[0]}: 월 전체값이 성질별 롤업과 "
+                f"{worst[3]:.2%} 어긋난다 - 품목 정의나 정정 반영을 의심할 것")
+            print(f"  성질별 품목 대조: 최대 격차 {worst[3]:.6%} "
+                  f"({worst[1]} {worst[2]} {worst[0]})")
+    else:
+        print("  성질별 품목 대조: fact_temper가 없어 건너뛴다 (11 먼저 실행)")
     print("검증 통과 — 총계 교차 일치, 부분합 <= 총계, 계열마다 항목 11개")
 
 
