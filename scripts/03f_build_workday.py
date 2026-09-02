@@ -61,7 +61,7 @@ DB = os.path.join(ROOT, "data", "processed", "kcsdb.duckdb")
 CAL = os.path.join(ROOT, "data", "external", "KASI_공휴일.csv")
 
 SEGMENTS = [(10, 1, 10, "상순"), (20, 11, 20, "중순"), (99, 21, 31, "하순")]
-START = "2007-01-01"
+START = "1995-01-01"   # 2026-09-02에 2007에서 당겼다. 달력은 03h가 뒤로 늘린다.
 
 
 def load_holidays() -> tuple[set, pd.Timestamp]:

@@ -65,10 +65,10 @@ INVENTORY = {
                    "국가 × 월",
                    "관세청 품목별 국가별 수출입실적(GW) · 15100475 (총계 응답)"),
     "fact_nqi": ("신성질별 × 국가 × 월 수출입 실적. 관세청이 직접 집계한 공식치라 "
-                 "HS 개정 추정이 섞이지 않는다. <b>이 표만 2005년부터다</b>",
+                 "HS 개정 추정이 섞이지 않는다. 이 표만 2005년부터다",
                  "신성질별 × 국가 × 월",
                  "관세청 신성질별 수출입실적(GW) · 15101616"),
-    "fact_temper": ("성질별 × 월 수출입 실적. 관세청 공식치이고 <b>이 표만 1995년부터</b>다. "
+    "fact_temper": ("성질별 × 월 수출입 실적. 관세청 공식치이고 이 표만 1995년부터다. "
                     "10일 자료의 10대 품목이 이 분류로 정의되어, 품목 단위로 맞대 볼 수 "
                     "있는 유일한 계열이다. 수출과 수입은 부호 체계가 서로 다르다",
                     "방향 × 성질부호 × 월",
@@ -81,12 +81,12 @@ INVENTORY = {
                     "국가", "관세청 + 외교부 국가표준코드 · 15091117"),
     "dim_hs10": ("HS10 품목명(한/영)·수량/중량 단위·적용시작일",
                  "HS10", "관세청 HS부호 · 15049722"),
-    "dim_hs6_concordance": ("HS 개정 사이 6자리 대응. <b>관세청 공표</b>",
+    "dim_hs6_concordance": ("HS 개정 사이 6자리 대응. 관세청 공표",
                             "(HS2022, 과거코드, 판본)", "관세청 FTA 포털 HS 연계표"),
-    "dim_hs10_concordance": ("개정 하나(2012·2017·2022)를 건너는 10자리 연결. <b>추정</b>",
+    "dim_hs10_concordance": ("개정 하나(2012·2017·2022)를 건너는 10자리 연결. 추정",
                              "(출발코드, 도착코드, 개정)",
                              "기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터"),
-    "dim_hs10_to_2022": ("과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. <b>추정</b>",
+    "dim_hs10_to_2022": ("과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. 추정",
                          "(과거코드, 판본, HS2022)",
                          "기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터"),
     "dim_hs10_name_hist": ("HS10 품명 이력. 폐지코드 이름이 여기 있다",
@@ -226,7 +226,7 @@ def release_body(s: dict, inv: list[dict]) -> list[str]:
         "",
         "- 표마다 기간이 다르다. 성질별 공식 실적(`fact_temper`)은 1995년, "
         "신성질별(`fact_nqi`)은 2005년부터이고, 조업일수 달력(`dim_workday10d`)은 "
-        "2027년까지 미리 만들어 두었다.",
+        "1995년부터 2027년까지 미리 만들어 두었다.",
         "- `fact_trade`·`fact_nqi`·`fact_temper`는 **같은 무역을 다른 분류로 "
         "집계한 것이라 서로 더하면 안 된다.**",
         "- `v_exp10d_seg` 뷰를 쓸 때는 `series`를 반드시 걸러야 한다"
@@ -281,6 +281,13 @@ def collect() -> dict:
         e_lo, e_hi, e_rows, e_ser = con.sql(
             "SELECT MIN(base_ym), MAX(base_ym), COUNT(*), COUNT(DISTINCT series) "
             "FROM fact_exp10d").fetchone()
+        # 가장 긴 계열. 표가 없는 DB(11을 안 돌린 경우)에서도 죽지 않게 한다.
+        t_lo = t_hi = t_months = None
+        if con.sql("SELECT COUNT(*) FROM duckdb_tables() "
+                   "WHERE table_name = 'fact_temper'").fetchone()[0]:
+            t_lo, t_hi, t_months = con.sql(
+                "SELECT MIN(yyyymm), MAX(yyyymm), COUNT(DISTINCT yyyymm) "
+                "FROM fact_temper").fetchone()
     finally:
         con.close()
 
@@ -290,6 +297,8 @@ def collect() -> dict:
         n_country=n_country, n_hs10=n_hs10, named=named,
         pct=100.0 * named / n_hs10,
         exp_lo=fmt(e_lo), exp_hi=fmt(e_hi), exp_rows=e_rows, exp_series=e_ser,
+        tmp_lo=fmt(t_lo) if t_lo else None,
+        tmp_hi=fmt(t_hi) if t_hi else None, tmp_months=t_months,
         db_mb=DB.stat().st_size / 1024 ** 2, db_mtime=DB.stat().st_mtime,
     )
 
@@ -309,7 +318,11 @@ def block_html(s: dict) -> str:
     return "\n".join([
         '    <div class="stats">',
         card.format(n=f"{s['rows']:,}", k="fact_trade 거래행"),
-        card.format(n=f"{s['lo']}–{s['hi']}", k=f"월 실적 범위 ({s['months']}개월)"),
+        card.format(n=f"{s['lo']}–{s['hi']}", k=f"HS10 월 실적 ({s['months']}개월)"),
+        # 성질별이 가장 길다. 본문이 "담은 실적은 다섯"이라 말하는데 카드가
+        # fact_trade 이야기만 하면 한눈에 보이는 것과 어긋난다.
+        *([card.format(n=f"{s['tmp_lo']}–{s['tmp_hi']}",
+                       k=f"성질별 실적 ({s['tmp_months']}개월)")] if s['tmp_lo'] else []),
         card.format(n=f"{s['n_country']}", k="국가 (stat_cd)"),
         card.format(n=f"{s['n_hs10']:,}", k="HS10 품목 종수"),
         '    </div>',
