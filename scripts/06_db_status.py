@@ -434,12 +434,17 @@ def main() -> None:
         # 실제로 그랬다 — 2026-08-30에 올린 v1.0-202607에는 다음 날 넣은
         # fact_temper가 없다. 태그만 견주면 이 경우를 놓친다.
         touched = bool(rel["uploaded"]) and s["db_mtime"] > rel["uploaded"]
-        want = base
-        if rel["tag"] == base and touched:
+        # 게시본이 base이거나 그 개정판(base.N)이면 같은 달을 가리키는 것이다.
+        same = rel["tag"] == base or rel["tag"].startswith(base + ".")
+        if same and touched:
             # 같은 달 안에서 내용만 바뀌었으면 개정 번호를 올린다.
             nums = [int(t.rsplit(".", 1)[-1]) for t in rel["tags"]
                     if t.startswith(base + ".") and t.rsplit(".", 1)[-1].isdigit()]
             want = f"{base}.{max(nums) + 1 if nums else 1}"
+        elif same:
+            want = rel["tag"]      # 이미 최신이다. 개정판이어도 그대로 둔다.
+        else:
+            want = base
         print(f"\n게시본 {rel['tag']} ({rel['published']}, {rel['name']} "
               f"{rel['mb']:,.0f}MB) | 로컬 기준이면 {want}")
         if rel["tag"] != want:
