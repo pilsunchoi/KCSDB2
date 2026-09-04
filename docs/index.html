@@ -13,6 +13,10 @@
   html,body{margin:0}
   body{
     background:var(--bg); color:var(--ink);
+    /* 한국어는 기본값(break-all에 가까운 동작)이면 낱말 한가운데서 끊긴다
+       — "관세청 품목별 국/가별"처럼. keep-all이 띄어쓰기에서만 끊게 하고,
+       overflow-wrap이 dim_hs10_to_major10 같은 긴 식별자를 넘치지 않게 받는다. */
+    word-break:keep-all; overflow-wrap:break-word;
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",Roboto,sans-serif;
     line-height:1.6; -webkit-text-size-adjust:100%;
   }
@@ -35,7 +39,7 @@
   .tabrow::-webkit-scrollbar{display:none}
   .tabrow button{
     flex:0 0 auto; border:1px solid transparent; background:transparent; color:var(--muted);
-    font:inherit; font-weight:600; font-size:.92rem; padding:8px 14px; border-radius:999px; cursor:pointer; white-space:nowrap;
+    font:inherit; font-weight:600; font-size:.92rem; padding:11px 14px; border-radius:999px; cursor:pointer; white-space:nowrap;
   }
   .tabrow button:hover{color:var(--ink);background:var(--brand-soft)}
   .tabrow button[aria-selected="true"]{color:var(--brand);background:var(--brand-soft);border-color:#d4e2fb}
@@ -46,10 +50,19 @@
   section[role=tabpanel].active{display:block}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
   h2.h{font-size:1.56rem;margin:2px 0 6px}
-  .sub{color:var(--muted);margin:0 0 18px;font-size:.95rem}
-  .sub.lead{color:var(--ink);font-weight:600;font-size:1.02rem}
-  h3{font-size:1.02rem;margin:26px 0 8px}
-  section[role=tabpanel] > h4{font-size:.97rem;margin:18px 0 6px}
+  /* .sub는 두 가지로 쓰인다. 기본은 표·목록 뒤에 붙는 부연이고,
+     .lead는 탭 제목 아래 부제다. 여백이 달라야 해서 따로 적는다.
+     이걸 안 나눠 두었더니 문단마다 style="margin:..."이 붙어 있었다. */
+  .sub{color:var(--muted);margin:6px 0 14px;font-size:.95rem}
+  .sub.lead{color:var(--ink);font-weight:600;font-size:1.02rem;margin:0 0 18px}
+  .sub.lead + .panel{margin-top:0}
+  /* 제목 세 층이 크기만으로는 갈리지 않았다(h3 1.02 / caption .95 / h4 .97).
+     h3는 키우고 위에 실선을 둘러 절의 시작을 눈에 띄게 하고, h4는 한 단 낮춘다. */
+  h3{font-size:1.2rem;margin:30px 0 8px;letter-spacing:-.01em}
+  section[role=tabpanel] > h3{border-top:1px solid var(--line);padding-top:24px}
+  section[role=tabpanel] > h3:first-of-type{border-top:none;padding-top:0;margin-top:22px}
+  section[role=tabpanel] > h4{font-size:1rem;margin:20px 0 6px}
+  ol.steps h4{font-size:1rem;margin:0 0 4px}
   p{margin:8px 0}
 
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 16px;margin:14px 0}
@@ -69,9 +82,19 @@
     background:var(--brand);color:#fff;font-weight:700;font-size:.85rem;display:grid;place-items:center}
 
   /* tables */
-  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:10px 0;-webkit-overflow-scrolling:touch}
+  /* 표는 폭이 모자라면 제 안에서 가로로 스크롤한다. 스크롤이 가능하다는 표시가
+     없으면 모바일에서 오른쪽 열을 통째로 놓친다 — 양끝 그림자로 알린다.
+     local/scroll 배경을 겹치는 방식이라 스크롤이 없을 때는 그림자도 안 보인다. */
+  .tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;margin:14px 0;
+    -webkit-overflow-scrolling:touch;
+    background:
+      linear-gradient(to right,var(--panel) 40%,rgba(255,255,255,0)) left center/28px 100% no-repeat local,
+      linear-gradient(to left,var(--panel) 40%,rgba(255,255,255,0)) right center/28px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%,rgba(16,24,40,.16),rgba(16,24,40,0)) left center/12px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%,rgba(16,24,40,.16),rgba(16,24,40,0)) right center/12px 100% no-repeat scroll;
+    background-color:var(--panel)}
   table{border-collapse:collapse;width:100%;min-width:440px;font-size:.9rem}
-  caption{caption-side:top;text-align:left;font-weight:700;padding:10px 12px 2px;font-size:.95rem}
+  caption{caption-side:top;text-align:left;font-weight:700;padding:10px 12px 2px;font-size:.93rem}
   th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
   thead th{background:#f2f5f9;color:var(--muted);font-weight:700;white-space:nowrap}
   tbody tr:last-child td{border-bottom:none}
@@ -81,6 +104,11 @@
   td.s,th.s{font-size:.84rem;color:var(--muted)}
   tr.grp td{background:#f2f5f9;font-weight:700;color:var(--ink);font-size:.88rem;
     padding-top:10px;padding-bottom:6px}
+  /* 스키마 표 다섯은 모양이 같다(컬럼/출처/비고). 열 너비를 맞춰야
+     연달아 읽을 때 눈이 같은 자리에 머문다. */
+  table.sch th:nth-child(1),table.sch td:nth-child(1){width:20%}
+  table.sch th:nth-child(2),table.sch td:nth-child(2){width:20%}
+  tbody tr:hover td{background:#f8fafc}
   table.inv{min-width:760px}
   table.inv td:nth-child(2){min-width:230px}
   table.inv td:nth-child(5){min-width:210px}
@@ -112,8 +140,13 @@
   pre code{color:inherit}
   .inlinecode{background:#eef1f5;border:1px solid var(--line);border-radius:6px;padding:1px 6px}
 
-  .note{background:var(--info-soft);border:1px solid #dcdef2;border-radius:10px;padding:10px 14px;margin:12px 0;font-size:.9rem}
+  /* 상자는 두 갈래다. note = 알아 두면 좋은 보충, note.warn = 모르고 쓰면 틀리는 것.
+     왼쪽 굵은 선이 색을 못 보는 환경에서도 둘을 갈라 준다. */
+  .note{background:var(--info-soft);border:1px solid #dcdef2;border-left:3px solid var(--info);
+    border-radius:10px;padding:10px 14px;margin:14px 0;font-size:.9rem}
   .note b{color:var(--info)}
+  .note.warn{background:var(--warn-soft);border-color:#f0e2c0;border-left-color:var(--warn)}
+  .note.warn b{color:var(--warn)}
 
   /* research cards */
   .chapters{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin:14px 0}
@@ -151,6 +184,17 @@
   .mono-links a:hover{text-decoration:underline}
   .mono-links a.disabled{color:var(--muted);pointer-events:none;opacity:.6}
   @media (max-width:560px){
+    /* 좁은 화면에서는 최소폭을 풀어 들어갈 표는 들어가게 둔다. 440px로 못박으면
+       두 열짜리 표까지 전부 스크롤하고, 20~30px만 삐져나오는 표는
+       스크롤이 있는지도 모른 채 오른쪽이 잘린 것처럼 보인다.
+       진짜 넓은 표(inv)만 최소폭을 남긴다. */
+    table{min-width:0;font-size:.85rem}
+    table.inv{min-width:640px}
+    /* keep-all이 낱말을 통째로 묶어 칸의 최소폭을 밀어 올린다. 좁은 화면에서만
+       anywhere를 얹어, 자리가 모자랄 때는 낱말 안에서도 끊게 둔다. */
+    th,td{padding:7px 9px;overflow-wrap:anywhere}
+    /* 머리글 nowrap도 폭을 밀어 올린다. 좁은 화면에서는 접히게 둔다. */
+    thead th{white-space:normal}
     .mono-card{grid-template-columns:1fr;padding:16px 16px;gap:2px}
     .mono-num{font-size:1.9rem;margin-bottom:2px}
   }
@@ -167,6 +211,7 @@
 
   @media (max-width:420px){
     .brand h1{font-size:1.625rem}
+    h3{font-size:1.1rem}
     .stat .n{font-size:1.28rem}
     h2.h{font-size:1.4rem}
   }
@@ -178,7 +223,7 @@
       <h1>관세청 무역통계 DB</h1>
       <span class="tag">KCSDB2</span>
     </div>
-    <p class="lede">이 데이터베이스는 관세청이 OpenAPI로 공개하는 무역통계를 한데 모아 하나의 파일로 만든 것이다. 본체는 2007년 1월부터 최신 확정월까지의 <a href="https://www.data.go.kr/data/15100475/openapi.do" target="_blank" rel="noopener">품목별 국가별 수출입실적(GW)</a>이고, 여기에 <a href="https://www.data.go.kr/data/15102109/openapi.do" target="_blank" rel="noopener">성질별 수출입실적</a>(1995년부터, 이 DB에서 가장 긴 계열)과 <a href="https://www.data.go.kr/data/15101616/openapi.do" target="_blank" rel="noopener">신성질별 수출입실적</a>(2005년부터, HS 개정에 흔들리지 않는 계열), <a href="https://www.data.go.kr/data/15157908/openapi.do" target="_blank" rel="noopener">10일 단위 잠정치 네 계열</a>(월 통계가 나오기 전에 흐름을 읽는 용도)을 더했다. 무엇이 얼마나 들어 있고 어디서 받았는지는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭의 표 전체 목록에 있다.</p>
+    <p class="lede">이 데이터베이스는 관세청이 OpenAPI로 공개하는 무역통계를 한데 모아 하나의 파일로 만든 것이다. 본체는 2007년 1월부터 최신 확정월까지의 <a href="https://www.data.go.kr/data/15100475/openapi.do" target="_blank" rel="noopener">품목별 국가별 수출입실적(GW)</a>이고, 여기에 <a href="https://www.data.go.kr/data/15102109/openapi.do" target="_blank" rel="noopener">성질별 수출입실적</a>(1995년부터, 이 DB에서 가장 긴 계열)과 <a href="https://www.data.go.kr/data/15101616/openapi.do" target="_blank" rel="noopener">신성질별 수출입실적</a>(2005년부터, HS 개정에 흔들리지 않는 계열), <a href="https://www.data.go.kr/data/15157908/openapi.do" target="_blank" rel="noopener">10일 단위 잠정치 네 계열</a>(월 통계가 나오기 전에 흐름을 읽는 용도)을 더했다. 무엇이 얼마나 들어 있고 어디서 받았는지는 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭의 표 전체 목록에 있다.</p>
   </div>
 </header>
 
@@ -204,33 +249,35 @@
     <p class="sub lead">이 DB가 무엇을 담고, 어떤 설계 원칙 위에 서 있는지를 소개한다.</p>
 
     <div class="panel">
-      <p><b>무엇인가.</b> 관세청 무역통계 원본을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 담은 실적은 다섯이다 — <b>국가 × HS10 × 월</b>(2007~), <b>성질별 × 월</b>(1995~), <b>신성질별 × 국가 × 월</b>(2005~), <b>국가 × 월 총계</b>, <b>10일 단위 잠정치 네 계열</b>(2016~). 여기에 계산해 둔 지표(mart)가 더해진다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다. (DuckDB와 SQL이 무엇인지, fact와 dim으로 나눈 표 구조가 무엇인지는 <a href="#" onclick="showTab('research');return false">연구</a> 탭의 <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/chapters/chapter06/chapter06.md#3-데이터베이스란-무엇인가" target="_blank" rel="noopener">Chapter 6 「데이터베이스 구축 과정」</a>에 설명이 나와 있다.)</p>
-      <p><b>왜 만들었나.</b> 관세청 OpenAPI는 한 번의 호출에 한 달, 한 나라의 실적만 돌려주고, 개발계정 기준 하루 1만 회의 호출 한도가 있다. 이 DB를 채우는 데도 엿새에 걸쳐 5만 회를 넘겨 호출했고 원응답은 수 기가바이트였다 — XML은 줄마다 필드 이름을 되풀이하고 숫자까지 글자로 담는 형식이라 그렇다. 같은 내용을 DuckDB가 열 단위 이진 형식으로 압축해 담으면 몇백 MB로 줄어든다. 여기에 중간에 바뀐 품목코드를 이어 붙이는 작업이 더해진다. 이 DB가 커버하는 기간에 국제 협약에 따른 HS 개정이 세 번(2012·2017·2022), 국내 품목분류 개정이 두 번(2025·2026) 있었다. 시작점인 2007년 1월도 그해 개정으로 바뀐 체계여서, 2011년까지의 코드는 현행과 다른 판본(HS2007)이다. 6자리 연결은 관세청 공식 연계표로, 10자리 연결은 기재부 고시 별표에서 직접 만들어 넣었다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭). 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
-      <p><b>누구를 위한 것인가.</b> 무역 데이터를 받아 직접 분석하려는 연구자가 주 독자다. 로컬 주피터 노트북에서 읽어 쓰는 것을 전제로 한다. 받아서 쓰는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭에 있다.</p>
+      <p><b>무엇인가.</b> 관세청 무역통계 원본을 변형 없이 적재하고, 시계열 연결(HS 개정)과 참조 정보(국명·품목명·분류 체계·조업일수)를 별도의 dim 테이블로 제공하는 DuckDB 단일 파일 DB다. 담은 실적은 다섯이다 — 국가 × HS10 × 월(2007~), 성질별 × 월(1995~), 신성질별 × 국가 × 월(2005~), 국가 × 월 총계, 10일 단위 잠정치 네 계열(2016~). 여기에 계산해 둔 지표(mart)가 더해진다. 파일 하나(<code>kcsdb.duckdb</code>)만 내려받으면 별도 서버나 설치 없이 바로 SQL로 질의할 수 있다. (DuckDB와 SQL이 무엇인지, fact와 dim으로 나눈 표 구조가 무엇인지는 <a href="#" onclick="showTab('research');return false">연구</a> 탭의 <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/chapters/chapter06/chapter06.md#3-데이터베이스란-무엇인가" target="_blank" rel="noopener">Chapter 6 「데이터베이스 구축 과정」</a>에 설명이 나와 있다.)</p>
+      <p><b>왜 만들었나.</b> 관세청 OpenAPI는 한 번의 호출에 한 달, 한 나라의 실적만 돌려주고, 개발계정 기준 하루 1만 회의 호출 한도가 있다. 이 DB를 채우는 데도 엿새에 걸쳐 5만 회를 넘겨 호출했고 원응답은 수 기가바이트였다 — XML은 줄마다 필드 이름을 되풀이하고 숫자까지 글자로 담는 형식이라 그렇다. 같은 내용을 DuckDB가 열 단위 이진 형식으로 압축해 담으면 몇백 MB로 줄어든다.</p>
+      <p><b>모아도 이어지지 않는다.</b> 품목코드가 중간에 바뀌기 때문이다. 이 DB가 커버하는 기간에 국제 협약에 따른 HS 개정이 세 번(2012·2017·2022), 국내 품목분류 개정이 두 번(2025·2026) 있었다. 시작점인 2007년 1월도 그해 개정으로 바뀐 체계여서, 2011년까지의 코드는 현행과 다른 판본(HS2007)이다. 6자리 연결은 관세청 공식 연계표로, 10자리 연결은 기재부 고시 별표에서 직접 만들어 넣었다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭). 이 DB는 그 수집과 연결을 한 번 끝내 두어, 사용자가 곧바로 분석에 들어갈 수 있게 한다.</p>
+      <p><b>누구를 위한 것인가.</b> 무역 데이터를 받아 직접 분석하려는 연구자가 주 독자다. 로컬 주피터 노트북에서 읽어 쓰는 것을 전제로 하되 conda나 특정 파이썬 버전은 필요 없다 — 패키지 넷(<code>duckdb</code>·<code>pandas</code>·<code>matplotlib</code>·<code>jupyter</code>)이면 되고, 처음 여는 사람을 위한 튜토리얼 노트북(<code>notebooks/analysis_start.ipynb</code>)이 저장소에 있다. 반대로 이 DB가 답하지 못하는 것도 분명하다. 기업 단위 자료가 아니고(집계 통계라 누가 수출했는지는 알 수 없다), 관세율이 들어 있지 않으며(품목별 세율은 별도 자료다), 가장 빠른 계열이 10일 단위라 일 단위 추적에는 못 쓴다. 받아서 쓰는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭에 있다.</p>
     </div>
 
 <!-- DB_STATUS:START -->
     <div class="stats">
       <div class="stat"><div class="n">28,093,109</div><div class="k">fact_trade 거래행</div></div>
-      <div class="stat"><div class="n">2007.01–2026.07</div><div class="k">월 실적 범위 (235개월)</div></div>
+      <div class="stat"><div class="n">2007.01–2026.07</div><div class="k">HS10 월 실적 (235개월)</div></div>
+      <div class="stat"><div class="n">1995.01–2026.07</div><div class="k">성질별 실적 (379개월)</div></div>
       <div class="stat"><div class="n">240</div><div class="k">국가 (stat_cd)</div></div>
       <div class="stat"><div class="n">15,406</div><div class="k">HS10 품목 종수</div></div>
     </div>
 <!-- DB_STATUS:END -->
 
     <h3>설계 원칙 세 문장</h3>
-    <p>이 DB의 모든 결정은 하나의 최상위 원칙에서 나온다 — <b>DB는 관세청 원본을 최대한 그대로 담고, 분석을 위한 가공은 DB가 아니라 분석 계층에서 한다.</b> 이 원칙을 세 문장으로 압축하면 다음과 같다.</p>
+    <p>이 DB의 모든 결정은 하나의 최상위 원칙에서 나온다 — DB는 관세청 원본을 최대한 그대로 담고, 분석을 위한 가공은 DB가 아니라 분석 계층에서 한다. 이 원칙을 세 문장으로 압축하면 다음과 같다.</p>
     <ol class="principle">
       <li><b>fact(사실 테이블)는 관세청 API 응답 필드만 담는다.</b> 연·월을 따로 쪼갠 컬럼, HS 코드를 잘라 만든 상위 코드(hs2·hs4·hs6), 국명·품목명 같은 것은 원본에 없는 <em>파생값</em>이므로 fact에 넣지 않는다. 이런 값이 필요하면 아래 dim 테이블과 조인해서 얻는다. fact를 원본 그대로 두어야 나중에 어떤 분석이 와도 왜곡 없이 출발할 수 있다.</li>
       <li><b>관측값을 변형하지 않는다.</b> 관세청이 준 값은 그대로 저장한다 — 금액 0, 음수 중량(반품·수정신고로 뒤늦게 상계한 값), 초기 연도의 후행 공백까지 손대지 않는다. "이상해 보이니 고친다"가 아니라 "원본이 그러하니 보존한다"가 기준이다. 이상치 판단과 처리는 분석하는 연구자의 몫으로 남긴다.</li>
-      <li><b>연결과 참조는 dim(차원 테이블)이 담당한다.</b> 시간이 지나며 바뀌는 HS 품목코드의 개정 연결(6자리와 10자리 두 층위), 국가코드에 붙는 표준 국명·ISO·대륙, HS10에 붙는 품목명·단위는 모두 dim 테이블이 제공한다. fact는 raw로 두고, "무엇과 무엇을 잇는가"는 dim에서 처리한다. 매 분석마다 반복하던 연결 작업을 DB 계층에서 한 번에 끝내는 것이 핵심이다. 다만 <b>공표된 자료를 옮긴 것</b>(HS6 연계)과 <b>우리가 추정한 것</b>(HS10 연계)은 테이블을 나누어 성격을 구분한다.</li>
+      <li><b>연결과 참조는 dim(차원 테이블)이 담당한다.</b> 시간이 지나며 바뀌는 HS 품목코드의 개정 연결(6자리와 10자리 두 층위), 국가코드에 붙는 표준 국명·ISO·대륙, HS10에 붙는 품목명·단위는 모두 dim 테이블이 제공한다. fact는 raw로 두고, "무엇과 무엇을 잇는가"는 dim에서 처리한다. 매 분석마다 반복하던 연결 작업을 DB 계층에서 한 번에 끝내는 것이 핵심이다. 다만 공표된 자료를 옮긴 것(HS6 연계, 성질별·신성질별 분류)과 우리가 추정한 것(HS10 연계)은 테이블을 나누어 성격을 구분한다. 한 표 안에 둘이 섞이는 자리도 있다 — <code>dim_hs10_to_nqi</code>는 현행 코드에는 공표 대응을 그대로 쓰지만(11,327행) 옛 코드는 우리 추정을 거치므로(6,038행), <code>method</code> 열이 <code>direct</code>와 <code>chain</code>으로 그것을 갈라 준다. 섞였다는 사실 자체를 감추지 않는 것이 이 원칙의 요점이다. 우리가 계산해 넣은 지표는 이름 앞에 <code>mart</code>를 붙여 층을 아예 달리한다.</li>
     </ol>
 
     <div class="btnrow">
       <a class="btn primary" href="https://github.com/pilsunchoi/KCSDB2" target="_blank" rel="noopener">GitHub 저장소</a>
       <a class="btn" href="https://github.com/pilsunchoi/KCSDB2/releases" target="_blank" rel="noopener">Releases (DB 내려받기)</a>
     </div>
-    <p class="sub" style="margin-top:6px">DB 실물(<code>kcsdb.duckdb</code>)은 저장소가 아니라 Releases 첨부로 배포된다. 받는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭 참조.</p>
+    <p class="sub">DB 실물(<code>kcsdb.duckdb</code>)은 저장소가 아니라 Releases 첨부로 배포된다. 받는 방법은 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭 참조.</p>
   </section>
 
   <!-- ============ DB 구축 ============ -->
@@ -240,8 +287,8 @@
 
     <h3>계층 분리</h3>
     <div class="panel">
-      <p>이 DB는 일을 두 계층으로 나눈다. <b>DB 계층</b>은 관세청 원본을 정확히 보존하고 연결·검증까지만 책임진다. 단가 계산, 품목의 진입·퇴출 분석, 위기 국면 비교 같은 <b>분석</b>은 DB가 하지 않고, DB 밖의 별도 스크립트(분석 계층)에서 한다.</p>
-      <p class="sub" style="margin:6px 0 12px">이렇게 나누는 이유는, 특정 분석에 편리하도록 DB를 미리 가공해 두면 그 가공이 다른 분석에서는 오히려 방해가 되기 때문이다. DB를 raw로 중립적으로 두면 어떤 분석이든 같은 출발선에서 시작할 수 있다.</p>
+      <p>이 DB는 일을 두 계층으로 나눈다. DB 계층은 관세청 원본을 정확히 보존하고 연결·검증까지만 책임진다. 단가 계산, 품목의 진입·퇴출 분석, 위기 국면 비교 같은 분석은 DB가 하지 않고, DB 밖의 별도 스크립트(분석 계층)에서 한다.</p>
+      <p class="sub">이렇게 나누는 이유는, 특정 분석에 편리하도록 DB를 미리 가공해 두면 그 가공이 다른 분석에서는 오히려 방해가 되기 때문이다. DB를 raw로 중립적으로 두면 어떤 분석이든 같은 출발선에서 시작할 수 있다.</p>
       <div class="tblwrap">
         <table>
           <thead><tr><th>DB 계층 (이 DB의 책임)</th><th>분석 계층 (DB 밖, 별도 스크립트)</th></tr></thead>
@@ -252,13 +299,13 @@
           </tbody>
         </table>
       </div>
-      <p class="sub" style="margin:6px 0 0">분해 방법론 결함(HS6 셀 내 단가 이질성 등)은 분석 계층 사안이다. DB는 raw를 정확히 보존해 분석 계층이 올바르게 처리할 수 있게 한다.</p>
+      <p class="sub">분해 방법론 결함(HS6 셀 내 단가 이질성 등)은 분석 계층 사안이다. DB는 raw를 정확히 보존해 분석 계층이 올바르게 처리할 수 있게 한다.</p>
     </div>
 
     <h3>fact 스키마 (관세청 raw)</h3>
-    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. <b>다섯 종류</b>가 있다. <code>fact_trade</code>는 <b>국가 × HS10 품목 × 월</b> 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 <b>국가 × 월</b>로 합산된 총계 행이다. <code>fact_nqi</code>는 같은 통관 실적을 <b>신성질별 × 국가 × 월</b>로 관세청이 직접 집계한 것으로, HS 개정에 흔들리지 않는 계열이 필요할 때 쓴다(이 표만 2005년부터다). 넷째 <code>fact_temper</code>는 같은 실적을 <b>성질별 × 월</b>로 집계한 것으로, 10일 자료의 10대 품목이 이 분류로 정의된다(이 표만 1995년부터다). 다섯째 <code>fact_exp10d</code>는 다른 API에서 오는 <b>10일 단위</b> 잠정치로, 수출·수입 각각의 주요품목별과 주요국가별 <b>네 계열</b>이 <code>series</code> 열로 갈려 담긴다. 월 자료보다 훨씬 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 다섯 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
+    <p>fact는 실제 거래 수치가 담기는 핵심 테이블이다. 다섯 종류가 있다. <code>fact_trade</code>는 국가 × HS10 품목 × 월 단위의 세밀한 거래 행이고, <code>fact_total</code>은 품목 구분 없이 국가 × 월로 합산된 총계 행이다. <code>fact_nqi</code>는 같은 통관 실적을 신성질별 × 국가 × 월로 관세청이 직접 집계한 것으로, HS 개정에 흔들리지 않는 계열이 필요할 때 쓴다(이 표만 2005년부터다). 넷째 <code>fact_temper</code>는 같은 실적을 성질별 × 월로 집계한 것으로, 10일 자료의 10대 품목이 이 분류로 정의된다(이 표만 1995년부터다). 다섯째 <code>fact_exp10d</code>는 다른 API에서 오는 10일 단위 잠정치로, 수출·수입 각각의 주요품목별과 주요국가별 네 계열이 <code>series</code> 열로 갈려 담긴다. 월 자료보다 훨씬 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 다섯 다 관세청이 준 필드만 담으며 우리가 계산해 넣은 컬럼은 없다.</p>
     <div class="tblwrap">
-      <table>
+      <table class="sch">
         <caption>fact_trade — 거래 행 (국가 × HS10 × 월), 8필드</caption>
         <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
         <tbody>
@@ -274,7 +321,7 @@
       </table>
     </div>
     <div class="tblwrap">
-      <table>
+      <table class="sch">
         <caption>fact_total — 국가 × 월 총계, 7필드 (HS 컬럼 없음)</caption>
         <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
         <tbody>
@@ -288,9 +335,9 @@
     </div>
     <p class="sub">총계 행은 응답에 국가코드가 없어 stat_cd를 파일명에서 추출한다 — 이것이 DB 전체에서 유일하게 허용하는 파생이다.</p>
 
-    <p><b>셋째 fact는 분류 체계가 다르다.</b> <code>fact_nqi</code>는 같은 통관 실적을 HS가 아니라 관세청 <b>신성질별</b>로 집계한 것이다. HS 컬럼이 없고 그 자리에 <code>nqi5</code>(세세분류 코드)가 온다. 응답은 수출과 수입이 세로로 나뉘어 오는데(<code>impexp</code> 필드) <code>fact_trade</code>와 같은 가로 형태로 돌려 담았다 — 값은 그대로이고 모양만 바꾼 것이다. <code>bal_payments</code>는 응답에 없어 담지 않는다.</p>
+    <p><b>셋째 fact는 분류 체계가 다르다.</b> <code>fact_nqi</code>는 같은 통관 실적을 HS가 아니라 관세청 신성질별로 집계한 것이다. HS 컬럼이 없고 그 자리에 <code>nqi5</code>(세세분류 코드)가 온다. 응답은 수출과 수입이 세로로 나뉘어 오는데(<code>impexp</code> 필드) <code>fact_trade</code>와 같은 가로 형태로 돌려 담았다 — 값은 그대로이고 모양만 바꾼 것이다. <code>bal_payments</code>는 응답에 없어 담지 않는다.</p>
     <div class="tblwrap">
-      <table>
+      <table class="sch">
         <caption>fact_nqi — 신성질별 × 국가 × 월, 7필드 (HS 컬럼 없음)</caption>
         <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
         <tbody>
@@ -304,31 +351,31 @@
     </div>
     <div class="note">
       <b>신성질별은 무엇이 다른가.</b>
-      HS는 물건이 <b>무엇인지</b>로 나눈다 — 재료와 가공도를 따라 장(chapter)이 편성된다.
-      신성질별은 그 물건이 경제에서 <b>어떤 쓰임인지</b>로 나눈다.
-      꼭대기에 <b>소비재·원자재·자본재</b> 셋이 있고 그 아래로 중(14)·소(68)·세(303)·세세(758)로 갈린다.
+      HS는 물건이 무엇인지로 나눈다 — 재료와 가공도를 따라 장(chapter)이 편성된다.
+      신성질별은 그 물건이 경제에서 어떤 쓰임인지로 나눈다.
+      꼭대기에 소비재·원자재·자본재 셋이 있고 그 아래로 중(14)·소(68)·세(303)·세세(758)로 갈린다.
       메모리반도체는 <code>3.자본재 &gt; 1)반도체 &gt; 34010101</code>로 분류된다.
-      두 체계의 경계는 서로 어긋난다 — 우리 자료에 나오는 HS 96개 장 가운데 <b>36개가 대분류 둘 이상에 걸친다</b>.
+      두 체계의 경계는 서로 어긋난다 — 우리 자료에 나오는 HS 96개 장 가운데 36개가 대분류 둘 이상에 걸친다.
       쓰임이 갈리는 자리가 물건의 종류와 다르기 때문이다.
       2025년 수출을 이 셋으로 가르면 자본재 4,213억, 원자재 1,913억, 소비재 968억 달러다.
     </div>
 
     <p><b>넷째 fact는 기간이 가장 길다.</b> <code>fact_temper</code>는 같은 실적을 관세청
-      <b>성질별</b>로 집계한 것으로 <b>1995년 1월부터</b> 있다 — <code>fact_trade</code>보다
+      성질별로 집계한 것으로 1995년 1월부터 있다 — <code>fact_trade</code>보다
       열두 해, <code>fact_nqi</code>보다 열 해 앞선다. 이 표를 받은 이유는 따로 있다.
       10일 잠정치의 10대 품목이 바로 이 분류의 마디로 정의되어 있어, 부호를 묶으면
-      <b>10일 자료를 품목 단위로 맞대 볼 수 있는 유일한 계열</b>이 된다.
-      <b>수출과 수입은 부호 체계가 서로 다르다</b> — 수출 153개, 수입 181개이고 나무가
+      10일 자료를 품목 단위로 맞대 볼 수 있는 유일한 계열이 된다.
+      수출과 수입은 부호 체계가 서로 다르다 — 수출 153개, 수입 181개이고 나무가
       아예 달라 같은 부호 <code>11201</code>이 수출에서는 기타 육류, 수입에서는 쌀이다.
       그래서 <code>fact_nqi</code>처럼 가로로 눕히지 않고 <code>imexp</code>를 키에 둔
       세로 형태로 담는다.</p>
     <div class="tblwrap">
-      <table>
+      <table class="sch">
         <caption>fact_temper — 방향 × 성질부호 × 월, 5필드 (세로 형태)</caption>
         <thead><tr><th>컬럼</th><th>출처</th><th>비고</th></tr></thead>
         <tbody>
           <tr><td><code>yyyymm</code></td><td>응답 year</td><td>응답이 <code>2026.01</code> 꼴. 점만 제거</td></tr>
-          <tr><td><code>imexp</code></td><td>응답 impexp</td><td><code>수출</code> / <code>수입</code>. <b>키의 일부다</b> — 부호 체계가 방향마다 다르다</td></tr>
+          <tr><td><code>imexp</code></td><td>응답 impexp</td><td><code>수출</code> / <code>수입</code>. 키의 일부다 — 부호 체계가 방향마다 다르다</td></tr>
           <tr><td><code>temper_cd</code></td><td>응답 godsCd</td><td>성질부호. 이름·계층·10대 품목 꼬리표는 <code>dim_temper</code>가 준다</td></tr>
           <tr><td><code>dlr</code></td><td>응답 dlr</td><td>금액</td></tr>
           <tr><td><code>wgt</code></td><td>응답 wgt</td><td>중량</td></tr>
@@ -340,57 +387,56 @@
       <b>성질별과 신성질별은 무엇이 다른가.</b>
       이름이 한 글자 차이라 헷갈리지만 별개 분류다. 둘 다 물건의 쓰임으로 나누는 것은 같고,
       갈리는 자리가 셋이다.
-      첫째, <b>성질별은 수출과 수입이 서로 다른 나무다</b> — 수출 153부호는 식료및직접소비재·원료및연료·경공업품·중화학공업품
+      첫째, 성질별은 수출과 수입이 서로 다른 나무다 — 수출 153부호는 식료및직접소비재·원료및연료·경공업품·중화학공업품
       넷에서 뻗고, 수입 181부호는 소비재·원자재·자본재 셋에서 뻗는다.
       그래서 같은 부호 <code>11201</code>이 수출에서는 기타 육류, 수입에서는 쌀이다.
       신성질별은 방향과 무관한 하나의 체계이고 세세분류가 758개다.
-      둘째, <b>성질별은 해상도가 낮은 대신 10대 품목과 정의가 같다</b>. 그래서 10일 자료를 품목 단위로
+      둘째, 성질별은 해상도가 낮은 대신 10대 품목과 정의가 같다. 그래서 10일 자료를 품목 단위로
       맞대 볼 수 있다.
-      셋째, <b>성질별이 열 해 더 길다</b>(1995년 대 2005년). 대신 우리 DB에서 국가 축을 갖는 쪽은 신성질별이다.
+      셋째, 성질별이 열 해 더 길다(1995년 대 2005년). 대신 우리 DB에서 국가 축을 갖는 쪽은 신성질별이다.
       요컨대 10대 품목을 맞대거나 긴 시계열이 필요하면 <code>fact_temper</code>, 경기 민감도나 목적지별 분석이면
       <code>fact_nqi</code>를 쓴다.
     </div>
 
-    <p><b>다섯째 fact는 성격이 다르다.</b> <code>fact_exp10d</code>는 관세청이 상순분을 11일, 중순분을 21일, 월 전체를 익월 1일에 내는 <b>10일 단위 잠정치</b>다(2016.01부터). 네 계열이 함께 들어 있다 — <code>exp_item</code>(수출 주요품목별), <code>exp_cnty</code>(수출 주요국가별), <code>imp_item</code>(수입 주요품목별), <code>imp_cnty</code>(수입 주요국가별). 월 자료가 나오기 전에 방향을 읽을 수 있다는 것이 값어치이고, 대신 각 계열이 열 항목과 총계뿐이며 중량이 없다. <b>뷰를 쓸 때 <code>series</code>를 반드시 걸러야 한다</b> — 안 그러면 품목과 국가가 섞여 총계가 두 배가 된다. 값은 <b>누적치</b>(1~10일, 1~20일, 1~말일)이고 단위는 천 달러이며, 원본 그대로 담는다. 구간 증분과 억 달러 환산은 뷰 <code>v_exp10d_seg</code>가 맡는다. <b>열 항목은 바로 위 신성질별이 아니다</b> — 관세청 <b>현행 수출 성질별</b> 분류에서 따온 것이고, 그것도 한 계층이 아니라 철강제품은 3단위, 반도체·석유제품·가전제품은 소분류, 나머지는 세분류에서 딴다. 두 분류는 같은 엑셀(<code>15049720</code>)에 나란히 들어 있어 헷갈리기 쉽다. 이름이 겹치는 것은 반도체와 선박뿐이고 승용차·자동차부품 같은 이름은 신성질별에 아예 없다.</p>
+    <p><b>다섯째 fact는 성격이 다르다.</b> <code>fact_exp10d</code>는 관세청이 상순분을 11일, 중순분을 21일, 월 전체를 익월 1일에 내는 10일 단위 잠정치다(2016.01부터). 네 계열이 함께 들어 있다 — <code>exp_item</code>(수출 주요품목별), <code>exp_cnty</code>(수출 주요국가별), <code>imp_item</code>(수입 주요품목별), <code>imp_cnty</code>(수입 주요국가별). 월 자료가 나오기 전에 방향을 읽을 수 있다는 것이 값어치이고, 대신 각 계열이 열 항목과 총계뿐이며 중량이 없다. 뷰를 쓸 때 <code>series</code>를 반드시 걸러야 한다 — 안 그러면 품목과 국가가 섞여 총계가 두 배가 된다. 값은 누적치(1~10일, 1~20일, 1~말일)이고 단위는 천 달러이며, 원본 그대로 담는다. 구간 증분과 억 달러 환산은 뷰 <code>v_exp10d_seg</code>가 맡는다. 열 항목은 바로 위 신성질별이 아니다 — 관세청 현행 수출 성질별 분류에서 따온 것이고, 그것도 한 계층이 아니라 철강제품은 3단위, 반도체·석유제품·가전제품은 소분류, 나머지는 세분류에서 딴다. 두 분류는 같은 엑셀(<code>15049720</code>)에 나란히 들어 있어 헷갈리기 쉽다. 이름이 겹치는 것은 반도체와 선박뿐이고 승용차·자동차부품 같은 이름은 신성질별에 아예 없다.</p>
 
-    <p class="sub">fact_exp10d 16,852행(계열당 4,213행). 이 자료는 <b>같은 시점을 여러 번 관측한다</b> — 당월은 잠정이고 전월까지는 신고 정정·취하를 반영해 갱신되기 때문이다. 그래서 값이 바뀔 때마다 새 행을 쌓고 <code>fetched_at</code>으로 구분한다. 나중에 "그때 알 수 있었던 값"으로 예측 성능을 정직하게 재려면 이 이력이 있어야 한다. 값이 그대로면 행을 만들지 않는다.</p>
+    <p class="sub">fact_exp10d 16,852행(계열당 4,213행). 이 자료는 같은 시점을 여러 번 관측한다 — 당월은 잠정이고 전월까지는 신고 정정·취하를 반영해 갱신되기 때문이다. 그래서 값이 바뀔 때마다 새 행을 쌓고 <code>fetched_at</code>으로 구분한다. 나중에 "그때 알 수 있었던 값"으로 예측 성능을 정직하게 재려면 이 이력이 있어야 한다. 값이 그대로면 행을 만들지 않는다.</p>
 
     <div class="note">
       <b>수치의 집계 기준 (관세청 정의).</b>
-      수출입 신고 통관 자료를 <b>국가 및 HS Code(2·4·6·10단위)별</b>로 집계한 국가별 품목별 무역통계다.
-      <b>금액</b>은 미화(USD)이며, 수출은 <b>FOB</b>(신고금액), 수입은 <b>CIF</b>(과세가격) 기준이다.
-      <b>중량</b>은 순중량(kg).
-      <b>국가</b>는 수출은 <b>최종목적국</b>, 수입은 <b>원산국</b>을 원칙으로 하며 무역통계부호상 ISO 코드로 분류한다.
-      단순 <b>통과물품이나 일시 반입·반출 물품은 제외</b>된다(물적 자원의 증감이 없으므로).
+      수출입 신고 통관 자료를 국가 및 HS Code(2·4·6·10단위)별로 집계한 국가별 품목별 무역통계다.
+      금액은 미화(USD)이며, 수출은 FOB(신고금액), 수입은 CIF(과세가격) 기준이다.
+      중량은 순중량(kg).
+      국가는 수출은 최종목적국, 수입은 원산국을 원칙으로 하며 무역통계부호상 ISO 코드로 분류한다.
+      단순 통과물품이나 일시 반입·반출 물품은 제외된다(물적 자원의 증감이 없으므로).
       통계는 매월 수출입 신고의 정정·취하를 반영해 전월까지 자료를 현행화한다(주기 1개월).
     </div>
 
     <h3>dim 스키마 (연결·참조)</h3>
-    <p>dim은 fact의 코드에 의미를 붙여 주는 참조 테이블이다. fact에는 <code>stat_cd</code>(국가코드)나 <code>hs10</code>(품목코드) 같은 <em>코드</em>만 있고 이름이 없다. 어느 나라인지, 무슨 품목인지, 개정 전 코드는 무엇이었는지를 알려면 아래 dim 테이블과 조인한다. 핵심은 <b>fact를 훼손하지 않고 이름·연결을 옆에 병기</b>한다는 점이다.</p>
+    <p>dim은 fact의 코드에 의미를 붙여 주는 참조 테이블이다. fact에는 <code>stat_cd</code>(국가코드)나 <code>hs10</code>(품목코드) 같은 <em>코드</em>만 있고 이름이 없다. 어느 나라인지, 무슨 품목인지, 개정 전 코드는 무엇이었는지를 알려면 아래 dim 테이블과 조인한다. 핵심은 fact를 훼손하지 않고 이름·연결을 옆에 병기한다는 점이다.</p>
     <div class="tblwrap">
-      <table>
+      <table class="sch">
         <caption>dim 테이블</caption>
         <thead><tr><th>테이블</th><th>키</th><th>담는 것</th></tr></thead>
         <tbody>
           <tr><td><code>dim_country</code></td><td>stat_cd</td><td>관세청 국명(원본 보존) + 외교부 표준명·ISO2/3·대륙(참조 병기). 미매칭 시 참조는 NULL("없으면 없는 대로")</td></tr>
           <tr><td><code>dim_hs10</code></td><td>hs10</td><td>관세청 품목명(한/영)·수량·중량단위·발효일(valid_from, 실측)·등장범위</td></tr>
-          <tr><td><code>dim_hs6_concordance</code></td><td>(hs2022, hs_past, past_version)</td><td>HS 개정 간 6자리 다대다 대응. relation: identity / mapped / deleted / new. <b>관세청 공식 연계표</b></td></tr>
-          <tr><td><code>dim_hs10_concordance</code></td><td>(hs_from, hs_to, revision)</td><td>개정 하나(2012·2017·2022)를 건너는 10자리 연결. weight(출발 코드별 합 1)·score·relation. <b>추정</b></td></tr>
-          <tr><td><code>dim_hs10_to_2022</code></td><td>(hs_past, past_version, hs2022)</td><td>과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. weight·method(chain / hs6_fallback). <b>추정</b></td></tr>
-          <tr><td><code>dim_hs10_name_hist</code></td><td>(hs10, byeolpyo_year)</td><td>HS10 품명 이력. 별표 여섯 판본의 국문·영문 품명. dim_hs10이 못 채운 폐지코드 이름이 여기 있다. <b>기재부 고시 원문</b></td></tr>
-          <tr><td><code>dim_nqi</code></td><td>nqi5</td><td>관세청 신성질별 분류 758개(세세분류)와 대·중·소·세 계층. 2012년 제정 후 코드 체계가 유지돼 HS 개정에 흔들리지 않는다. <b>관세청 공표</b></td></tr>
+          <tr><td><code>dim_hs6_concordance</code></td><td>(hs2022, hs_past, past_version)</td><td>HS 개정 간 6자리 다대다 대응. relation: identity / mapped / deleted / new. 관세청 공식 연계표</td></tr>
+          <tr><td><code>dim_hs10_concordance</code></td><td>(hs_from, hs_to, revision)</td><td>개정 하나(2012·2017·2022)를 건너는 10자리 연결. weight(출발 코드별 합 1)·score·relation. 추정</td></tr>
+          <tr><td><code>dim_hs10_to_2022</code></td><td>(hs_past, past_version, hs2022)</td><td>과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. weight·method(chain / hs6_fallback). 추정</td></tr>
+          <tr><td><code>dim_hs10_name_hist</code></td><td>(hs10, byeolpyo_year)</td><td>HS10 품명 이력. 별표 여섯 판본의 국문·영문 품명. dim_hs10이 못 채운 폐지코드 이름이 여기 있다. 기재부 고시 원문</td></tr>
+          <tr><td><code>dim_nqi</code></td><td>nqi5</td><td>관세청 신성질별 분류 758개(세세분류)와 대·중·소·세 계층. 2012년 제정 후 코드 체계가 유지돼 HS 개정에 흔들리지 않는다. 관세청 공표</td></tr>
           <tr><td><code>dim_hs10_to_nqi</code></td><td>(hs10, nqi5)</td><td>HS10 → 신성질별. weight·method(direct / chain). 현행 코드는 공표 대응표 그대로, 폐지 코드는 dim_hs10_to_2022로 이어 붙였다</td></tr>
-          <tr><td><code>dim_hs10_to_major10</code></td><td>(hs10, item)</td><td>HS10 → 10대 수출품목(반도체·승용차 등). <b>현행 수출 성질별</b> 기준이며 관세청 공표치와 대조해 확정했다</td></tr>
-          <tr><td><code>dim_temper</code></td><td>(방향, 성질부호)</td><td>성질별 부호 334개(수출 153·수입 181)의 이름과 4단 계층, 그리고 10대 품목 꼬리표. 이름은 API 응답에서 와 폐지부호까지 담는다. <b>관세청 공표</b></td></tr>
-          <tr><td><code>dim_workday10d</code></td><td>(base_ym, cutoff)</td><td>상순·중순·하순의 일수와 조업일수. 10일 단위 자료를 견주려면 반드시 필요하다 — 상순 조업일수가 1~8일로 여덟 배까지 벌어진다. <b>KASI 특일정보 검증 달력</b></td></tr>
+          <tr><td><code>dim_hs10_to_major10</code></td><td>(hs10, item)</td><td>HS10 → 10대 수출품목(반도체·승용차 등). 현행 수출 성질별 기준이며 관세청 공표치와 대조해 확정했다</td></tr>
+          <tr><td><code>dim_temper</code></td><td>(방향, 성질부호)</td><td>성질별 부호 334개(수출 153·수입 181)의 이름과 4단 계층, 그리고 10대 품목 꼬리표. 이름은 API 응답에서 와 폐지부호까지 담는다. 관세청 공표</td></tr>
+          <tr><td><code>dim_workday10d</code></td><td>(base_ym, cutoff)</td><td>상순·중순·하순의 일수와 조업일수. 10일 단위 자료를 견주려면 반드시 필요하다 — 상순 조업일수가 1~8일로 여덟 배까지 벌어진다. KASI 특일정보 검증 달력</td></tr>
         </tbody>
       </table>
     </div>
 
     <h3>HS 개정 연결</h3>
     <div class="panel">
-      <p><b>무엇이 문제인가.</b> HS 품목코드는 국제 협약에 따라 5년마다 개정된다(이 데이터 기간에는 2007·2012·2017·2022 네 판본이 걸쳐 있다). 개정 때 코드가 신설·폐지·통합·분할되기 때문에, <b>같은 상품인데도 연도에 따라 코드가 달라진다.</b> 코드가 같은지만 보고 시계열을 이으면, 개정으로 코드가 바뀐 품목은 도중에 끊기거나 엉뚱하게 이어진다. 이 끊김을 메우는 것이 <code>dim_hs6_concordance</code>(6자리)와 <code>dim_hs10_to_2022</code>(10자리) 테이블이다. 아래는 6자리 연결의 요지이고, 두 층위를 함께 다룬 자세한 기록은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭에 있다.</p>
-      <p><b>개정 시점.</b> 각 판본은 개정 연도 1월 1일부터 적용된다. 이 데이터에 걸친 네 판본의 적용 구간은 다음과 같다.</p>
+      <p><b>무엇이 문제인가.</b> HS 품목코드는 국제 협약에 따라 5년마다 개정된다. 개정 때 코드가 신설·폐지·통합·분할되므로 같은 상품인데도 연도에 따라 코드가 달라진다. 코드가 같은지만 보고 시계열을 이으면 그 품목은 도중에 끊기거나 엉뚱하게 이어진다. 각 판본은 개정 연도 1월 1일부터 적용되고, 이 데이터에는 네 판본이 이렇게 걸쳐 있다.</p>
       <div class="tblwrap">
         <table>
           <caption>HS 판본별 적용 구간</caption>
@@ -403,96 +449,8 @@
           </tbody>
         </table>
       </div>
-      <p class="sub" style="margin:2px 0 6px">즉 한 시계열이 2007~2026 전체를 지나가면 개정 경계 세 곳(2012·2017·2022 초)을 넘는다. 시기별로 그 시점에 유효한 판본을 골라 concordance로 이어야 한다.</p>
-      <p><b>왜 HS10이 아니라 HS6 단위로 잇는가.</b></p>
-      <ul>
-        <li>관세청이 공식 공개하는 연계표(FTA 원산지 판정용)가 <b>HS6까지만</b> 존재한다. HS10 단위의 공식 개정 대응표는 공개돼 있지 않다.</li>
-        <li>수출 변동 분해, 품목 다양성(granularity), 마진 분해 같은 경제 분석의 사실상 표준 해상도가 HS6다. 즉 대부분의 분석에 HS6면 충분하다.</li>
-        <li>HS10까지 내려가 다대다로 이으려면 자료 접근도 불확실하고 규칙 설계도 복잡해져, "원본 보존 + 최소한의 연결"이라는 이 DB의 원칙에서 벗어난다.</li>
-      </ul>
-      <div class="note" style="margin:8px 0 10px">
-        <b>2026-08 갱신.</b> 앞의 두 근거는 그대로 유효하다. 세 번째는 해소됐다 — 자료 접근 경로(국가법령정보센터의 연도별 별표 전문)를 찾았고 규칙도 설계해 <code>dim_hs10_to_2022</code>를 만들었다. 다만 <b>10자리 연계는 6자리 연계를 대체하지 않는다.</b> 6자리는 관세청이 공표한 사실이고 10자리는 우리가 추정한 것이라 근거의 성격이 다르므로, 테이블을 나누어 함께 제공한다. 자세한 것은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭 참조.
-      </div>
-      <p class="sub" style="margin:2px 0 10px">그래서 fact에는 HS10 원본을 그대로 두고, 분석할 때 앞 6자리로 잘라(<code>SUBSTR(hs10,1,6)</code>) concordance로 잇는다. 절단은 분석 계층에서 한다.</p>
-      <p><b>다대다 관계라 1:1 치환이 안 된다.</b> 개정은 단순 이름 변경이 아니다. 하나의 2022 코드가 옛 코드 여러 개로 갈라지거나(분할), 옛 코드 여러 개가 하나의 2022 코드로 합쳐진다(통합). 예를 들어 2022년 <code>010130</code>은 2007년 <code>010110</code>과 <code>010190</code> 둘 모두에 대응한다. DB는 이 다대다 관계에 억지 규칙을 세우지 않고 <b>있는 그대로 보존</b>하며, "어느 코드들이 같은 상품군인가"를 묶는 계산(연결 컴포넌트)은 분석 계층에서 한다.</p>
-      <p><b>HS2022를 허브로 하는 별(星) 모양 구조.</b> 세 연계표는 모두 최신판 HS2022를 기준점으로 삼아 과거 각 판본(2007/2012/2017)에 각각 대응한다. 2007을 직접 2012에 잇는 표는 없지만, 가장 먼 2022→2007 표가 전 구간을 덮으므로 세 표를 HS2022 허브로 결합하면 2007~2022 전체를 연결할 수 있다.</p>
-      <div class="tblwrap">
-        <table>
-          <caption>3개 연계표 출처 (관세청 FTA 포털, 공공누리 제1유형)</caption>
-          <thead><tr><th>연계표</th><th>concordance 행수</th></tr></thead>
-          <tbody>
-            <tr><td>HS2022 → 2007</td><td>6,592</td></tr>
-            <tr><td>HS2022 → 2012</td><td>6,415</td></tr>
-            <tr><td>HS2022 → 2017</td><td>5,937</td></tr>
-            <tr><td><b>합계 (dim_hs6_concordance)</b></td><td><b>18,944</b></td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <h3>무엇이 들어 있나 — 표 전체 목록</h3>
-    <p>이 DB는 관세청 공공데이터 <b>여덟 갈래</b>와 외부 참조 <b>셋</b>을 한 파일에 모은 것이다. 아래 표가 전부다. 행수와 기간은 DB를 직접 읽어 자동으로 채우므로 이 페이지가 실물보다 낡을 일이 없다. <b>fact</b>는 관세청이 준 실적을 그대로 담고, <b>dim</b>은 코드에 이름과 연결을 붙이며, <b>mart</b>는 이 저장소가 계산한 지표다. 계산한 것과 받은 것을 이름으로 갈라 두었으니 <b>접두어만 보고 근거의 성격을 알 수 있다.</b></p>
-<!-- DB_INVENTORY:START -->
-    <div class="tblwrap">
-      <table class="inv">
-        <caption>이 DB에 들어 있는 것 전부 (행수·기간은 자동 갱신)</caption>
-        <thead><tr><th>테이블</th><th>담는 것</th><th class="r">행수</th><th>기간</th><th>출처</th></tr></thead>
-        <tbody>
-          <tr class="grp"><td colspan="5">fact — 관세청이 준 실적 그대로</td></tr>
-          <tr><td><code>fact_trade</code></td><td>국가 × HS10 품목 × 월 수출입 실적. 이 DB의 본체</td><td class="r">28,093,109</td><td class="s">2007.01–2026.07</td><td class="s">관세청 품목별 국가별 수출입실적(GW) · 공공데이터포털 15100475</td></tr>
-          <tr><td><code>fact_total</code></td><td>품목 구분 없는 국가 × 월 총계</td><td class="r">57,105</td><td class="s">2007.01–2026.07</td><td class="s">관세청 품목별 국가별 수출입실적(GW) · 15100475 (총계 응답)</td></tr>
-          <tr><td><code>fact_nqi</code></td><td>신성질별 × 국가 × 월 수출입 실적. 관세청이 직접 집계한 공식치라 HS 개정 추정이 섞이지 않는다. <b>이 표만 2005년부터다</b></td><td class="r">6,567,873</td><td class="s">2005.01–2026.07</td><td class="s">관세청 신성질별 수출입실적(GW) · 15101616</td></tr>
-          <tr><td><code>fact_temper</code></td><td>성질별 × 월 수출입 실적. 관세청 공식치이고 <b>이 표만 1995년부터</b>다. 10일 자료의 10대 품목이 이 분류로 정의되어, 품목 단위로 맞대 볼 수 있는 유일한 계열이다. 수출과 수입은 부호 체계가 서로 다르다</td><td class="r">123,965</td><td class="s">1995.01–2026.07</td><td class="s">관세청 성질별 수출입실적(GW) · 15102109</td></tr>
-          <tr><td><code>fact_exp10d</code></td><td>10일 단위 잠정치 네 계열(수출·수입 × 주요품목·주요국가). 값이 바뀔 때마다 새 행을 쌓아 관측 이력을 남긴다</td><td class="r">16,852</td><td class="s">2016.01–2026.08</td><td class="s">관세청 10일 단위 잠정치 · 15157908·15157941·15157901·15157909</td></tr>
-          <tr class="grp"><td colspan="5">dim — 코드에 이름과 연결을 붙이는 참조</td></tr>
-          <tr><td><code>dim_country</code></td><td>국가코드에 관세청 국명과 외교부 표준명·ISO2/3·대륙을 병기</td><td class="r">240</td><td class="s">—</td><td class="s">관세청 + 외교부 국가표준코드 · 15091117</td></tr>
-          <tr><td><code>dim_hs10</code></td><td>HS10 품목명(한/영)·수량/중량 단위·적용시작일</td><td class="r">11,327</td><td class="s">—</td><td class="s">관세청 HS부호 · 15049722</td></tr>
-          <tr><td><code>dim_hs6_concordance</code></td><td>HS 개정 사이 6자리 대응. <b>관세청 공표</b></td><td class="r">18,944</td><td class="s">—</td><td class="s">관세청 FTA 포털 HS 연계표</td></tr>
-          <tr><td><code>dim_hs10_concordance</code></td><td>개정 하나(2012·2017·2022)를 건너는 10자리 연결. <b>추정</b></td><td class="r">50,864</td><td class="s">—</td><td class="s">기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터</td></tr>
-          <tr><td><code>dim_hs10_to_2022</code></td><td>과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. <b>추정</b></td><td class="r">75,719</td><td class="s">—</td><td class="s">기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터</td></tr>
-          <tr><td><code>dim_hs10_name_hist</code></td><td>HS10 품명 이력. 폐지코드 이름이 여기 있다</td><td class="r">72,129</td><td class="s">—</td><td class="s">기재부 고시 「관세·통계통합품목분류표」 별표 · 국가법령정보센터</td></tr>
-          <tr><td><code>dim_nqi</code></td><td>신성질별 분류의 대·중·소·세·세세 5단 계층과 이름</td><td class="r">758</td><td class="s">—</td><td class="s">관세청 신성질별 분류 · 15049720</td></tr>
-          <tr><td><code>dim_hs10_to_nqi</code></td><td>HS10 → 신성질별. 현행 코드는 공표 대응, 폐지 코드는 추정 경유</td><td class="r">17,365</td><td class="s">—</td><td class="s">관세청 15049720 + 이 저장소 추정</td></tr>
-          <tr><td><code>dim_hs10_to_major10</code></td><td>HS10 → 수출 10대 품목. 관세청 공표치와 대조해 확정</td><td class="r">2,544</td><td class="s">—</td><td class="s">관세청 15049720 + 공표치 대조</td></tr>
-          <tr><td><code>dim_temper</code></td><td>성질별 부호의 이름과 4단 계층, 그리고 10대 품목 꼬리표. 이름은 API 응답에서 와 폐지부호까지 담고, 계층은 별표에서 온다</td><td class="r">334</td><td class="s">—</td><td class="s">관세청 성질별 수출입실적 15102109 + 신성질별 분류 15049720</td></tr>
-          <tr><td><code>dim_workday10d</code></td><td>상순·중순·하순의 일수와 조업일수. 10일 자료를 견주려면 필요하다</td><td class="r">753</td><td class="s">2007.01–2027.11</td><td class="s">한국천문연구원 특일정보 API로 대조한 공휴일 달력</td></tr>
-          <tr class="grp"><td colspan="5">mart — 이 저장소가 계산한 지표</td></tr>
-          <tr><td><code>mart_exp10d_metrics</code></td><td>10일 자료 지표 — 조업일수 보정 전년 대비, 비중, 기여도, 진도율</td><td class="r">18,384</td><td class="s">2016.01–2026.08</td><td class="s">이 저장소가 계산</td></tr>
-          <tr><td><code>mart_exp10d_beta</code></td><td>항목별 조업일수 탄력성</td><td class="r">192</td><td class="s">—</td><td class="s">이 저장소가 추정</td></tr>
-          <tr><td><code>mart_exp10d_progress</code></td><td>진도율 분포(조업일 보정 전후)</td><td class="r">1,248</td><td class="s">—</td><td class="s">이 저장소가 계산</td></tr>
-          <tr><td><code>mart_exp10d_forecast</code></td><td>월 마감 예측과 구간</td><td class="r">4,416</td><td class="s">2019.01–2026.08</td><td class="s">이 저장소가 추정</td></tr>
-          <tr><td><code>mart_exp10d_fcskill</code></td><td>예측의 표본외 성적과 등급</td><td class="r">48</td><td class="s">—</td><td class="s">이 저장소가 계산</td></tr>
-          <tr><td><code>mart_exp10d_fclog</code></td><td>확정 전 예측의 기록(추가 전용)</td><td class="r">48</td><td class="s">—</td><td class="s">이 저장소가 계산</td></tr>
-          <tr><td><code>mart_nqi_check</code></td><td>신성질별 공식치와 우리 도출치의 월별 대조</td><td class="r">259</td><td class="s">2005.01–2026.07</td><td class="s">이 저장소가 계산</td></tr>
-          <tr class="grp"><td colspan="5">meta — 수집 기록</td></tr>
-          <tr><td><code>meta_calls</code></td><td>API 호출 기록. 무엇을 언제 몇 번 받았는지</td><td class="r">57,340</td><td class="s">—</td><td class="s">이 저장소의 수집 로그</td></tr>
-        </tbody>
-      </table>
-    </div><!-- DB_INVENTORY:END -->
-    <p class="sub">기간이 표마다 다르다. 월 실적(<code>fact_trade</code>)은 2007년부터, 신성질별 공식 실적(<code>fact_nqi</code>)은 2005년부터, 성질별 공식 실적(<code>fact_temper</code>)은 <b>1995년</b>부터, 10일 단위 잠정치는 2016년부터, 조업일수 달력은 <b>2027년까지</b> 미리 만들어 두었다.</p>
-
-    <h3>어디서 받았나</h3>
-    <p>원천은 공공데이터포털의 관세청 OpenAPI가 중심이고, 여기에 분류·달력 자료가 더해진다. 모두 무료이며 활용신청은 자동승인이다(<code>15049720</code>은 신청도 필요 없다). 아래 표의 번호가 공공데이터포털 데이터셋 번호다.</p>
-    <div class="tblwrap">
-      <table>
-        <caption>원천 자료와 받는 방법</caption>
-        <thead><tr><th>원천</th><th>번호</th><th>이 DB에서</th><th>비고</th></tr></thead>
-        <tbody>
-          <tr><td>관세청 품목별 국가별 수출입실적(GW)</td><td><code>15100475</code></td><td>fact_trade · fact_total</td><td>월×국가 전수 호출. 엿새에 걸쳐 5만 회를 넘겼다</td></tr>
-          <tr><td>관세청 신성질별 수출입실적(GW)</td><td><code>15101616</code></td><td>fact_nqi</td><td>엔드포인트 <code>newtempertrade</code>. 필수 변수 <code>imexTpcd</code>(1=수출/2=수입). 연 단위로 44회면 끝난다</td></tr>
-          <tr><td>관세청 성질별 수출입실적(GW)</td><td><code>15102109</code></td><td>fact_temper · dim_temper</td><td>엔드포인트 <code>Idfytempertrade</code>. 연 단위로 64회면 끝난다. <b>1995년부터</b>다</td></tr>
-          <tr><td>관세청 수출·수입 10일 단위 잠정치</td><td><code>15157908</code> <code>15157941</code><br><code>15157901</code> <code>15157909</code></td><td>fact_exp10d</td><td>주요품목별·주요국가별 각 수출입. 응답에 항목 이름이 없어 순서를 보도자료와 대조해 확정했다</td></tr>
-          <tr><td>관세청 HS부호</td><td><code>15049722</code></td><td>dim_hs10</td><td>품목명·단위·적용시작일</td></tr>
-          <tr><td>관세청 신성질별 분류</td><td><code>15049720</code></td><td>dim_nqi · dim_hs10_to_nqi · dim_hs10_to_major10</td><td>신청 불요·연간 갱신</td></tr>
-          <tr><td>외교부 국가표준코드</td><td><code>15091117</code></td><td>dim_country</td><td>표준 국명·ISO2/3·대륙</td></tr>
-          <tr><td>관세청 FTA 포털 HS 연계표</td><td>—</td><td>dim_hs6_concordance</td><td>6자리 개정 대응. <b>공표된 사실</b></td></tr>
-          <tr><td>기재부 고시 「관세·통계통합품목분류표」 별표</td><td>—</td><td>dim_hs10_concordance · dim_hs10_to_2022 · dim_hs10_name_hist</td><td>국가법령정보센터 PDF. 10자리 연결은 여기서 <b>이 저장소가 추정</b>한 것이다</td></tr>
-          <tr><td>한국천문연구원 특일정보 API</td><td>—</td><td>dim_workday10d</td><td>공휴일 달력을 전수 대조해 조업일수를 계산</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="note">
-      <b>같은 무역을 세 분류로 담는다 — 알고 쓰는 것이 좋다.</b> <code>fact_trade</code>(HS10×국가)와 <code>fact_nqi</code>(신성질별×국가), <code>fact_temper</code>(성질별)는 같은 통관 실적을 서로 다른 분류로 집계한 것이다. 셋을 더하면 안 된다. HS10 해상도가 필요하면 첫째를, HS 개정에 흔들리지 않는 계열이 필요하면 둘째를, 10일 자료와 품목을 맞대거나 1995년까지 거슬러야 하면 셋째를 쓴다. <code>fact_nqi</code>를 따로 받아 둔 이유는 <b>우리가 HS10에서 신성질별로 환산한 값이 옛 연도에서 정확하지 않기 때문</b>이다 — 총액은 맞지만 세세분류 배분이 2007년 25%, 2017년 5% 어긋나고 2022년부터야 0.3%로 떨어진다. 그 대조를 <code>mart_nqi_check</code>가 월별로 남긴다.
+      <p class="sub">한 시계열이 2007~2026 전체를 지나가면 개정 경계 세 곳(2012·2017·2022 초)을 넘는다. 여기에 국내 품목분류 개정이 2025·2026년에 더해진다.</p>
+      <p><b>DB가 하는 일은 연결표를 갖춰 두는 것까지다.</b> 끊김을 메우는 것은 <code>dim_hs6_concordance</code>(6자리, 관세청 공표)와 <code>dim_hs10_to_2022</code>(10자리, 우리 추정) 두 테이블이고, 근거의 성격이 달라 표를 나누어 함께 제공한다. fact에는 HS10 원본을 그대로 두므로 앞 6자리로 자르는 일(<code>SUBSTR(hs10,1,6)</code>)도 잇는 일도 분석 계층의 몫이다. 두 층위를 어떻게 만들었고 어디까지 믿을 수 있는지는 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭에 있다.</p>
     </div>
 
     <h3>커버리지</h3>
@@ -516,8 +474,8 @@
         </tbody>
       </table>
     </div>
-    <div class="note">
-      <b>읽는 법.</b> 위 concordance 수치는 <b>종수 기준·가정적 상한</b>이다(전 기간에 한 버전을 일괄 적용). 시기별 올바른 버전 + 거래액 기준으로 실측하면 미매칭은 <b>0.004~0.007%</b>에 불과하다(완전 사각지대 130종, 거래액 0.004%). hs10 커버리지 72.8%의 미매칭 27.2%(폐지코드)도 HS6 이하 해상도 분석에서는 concordance로 계열 식별이 가능해 문제가 되지 않는다. 폐지코드 품목명 자체는 2026-08에 해결됐다 — 국가법령정보센터의 연도별 HSK 별표에서 4,194종 중 3,738종(폐지코드 거래액의 94.1%)의 품명을 되찾아 <code>dim_hs10_name_hist</code>로 적재했다. 자세한 판정은 <a href="#" onclick="showTab('traps');return false">데이터 함정</a> 탭, 연계 작업은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭 참조.
+    <div class="note warn">
+      <b>읽는 법.</b> 위 concordance 수치는 종수 기준·가정적 상한이다(전 기간에 한 버전을 일괄 적용). 시기별 올바른 버전 + 거래액 기준으로 실측하면 미매칭은 0.004~0.007%에 불과하다(완전 사각지대 130종, 거래액 0.004%). hs10 커버리지 72.8%의 미매칭 27.2%(폐지코드)도 HS6 이하 해상도 분석에서는 concordance로 계열 식별이 가능해 문제가 되지 않는다. 폐지코드 품목명 자체는 2026-08에 해결됐다 — 국가법령정보센터의 연도별 HSK 별표에서 4,194종 중 3,738종(폐지코드 거래액의 94.1%)의 품명을 되찾아 <code>dim_hs10_name_hist</code>로 적재했다. 자세한 판정은 <a href="#" onclick="showTab('traps');return false">데이터 함정</a> 탭, 연계 작업은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭 참조.
     </div>
 
     <h3>검증 — 04_validate 5계층</h3>
@@ -528,7 +486,7 @@
       <span class="pill info">INFO 1</span>
       <span class="pill fail">FAIL 0</span>
     </div>
-    <p><b>PASS</b>는 통과, <b>FAIL</b>은 반드시 고쳐야 할 무결성 위반, <b>WARN</b>은 주의가 필요하나 결함은 아닌 항목, <b>INFO</b>는 참고 사항이다. <b>FAIL이 0</b>이라는 것이 가장 중요하다 — 무결성 위반이 하나도 없다는 뜻이다. WARN 4는 전부 원자료(관세청 공개자료) 자체의 한계(품목 커버리지 등)이지 DB가 잘못 만들어진 것이 아니다. INFO 1은 음수 중량 19행(관세청의 사후 정정 원본이므로 보존). 참고로 bal_payments 항등식은 거래 행 전체에서 위반 0으로 통과했다.</p>
+    <p>PASS는 통과, FAIL은 반드시 고쳐야 할 무결성 위반, WARN은 주의가 필요하나 결함은 아닌 항목, INFO는 참고 사항이다. FAIL이 0이라는 것이 가장 중요하다 — 무결성 위반이 하나도 없다는 뜻이다. WARN 4는 전부 원자료(관세청 공개자료) 자체의 한계(품목 커버리지 등)이지 DB가 잘못 만들어진 것이 아니다. INFO 1은 음수 중량 19행(관세청의 사후 정정 원본이므로 보존). 참고로 bal_payments 항등식은 거래 행 전체에서 위반 0으로 통과했다.</p>
   </section>
 
   <!-- ============ HS 연계 ============ -->
@@ -538,10 +496,10 @@
 
     <h3>왜 필요한가</h3>
     <div class="panel">
-      <p><b>품목코드는 5년마다 바뀐다.</b> HS는 국제 협약에 따라 개정되고, 이 데이터가 걸친 기간에는 2007·2012·2017·2022 네 판본이 들어 있다. 개정 때 코드가 신설·폐지·통합·분할되므로 <b>같은 상품인데 연도에 따라 코드가 달라진다.</b> 코드가 같은지만 보고 시계열을 이으면 그 품목은 도중에 끊기거나 엉뚱하게 이어진다.</p>
+      <p><b>품목코드는 5년마다 바뀐다.</b> HS는 국제 협약에 따라 개정되고, 이 데이터가 걸친 기간에는 2007·2012·2017·2022 네 판본이 들어 있다. 개정 때 코드가 신설·폐지·통합·분할되므로 같은 상품인데 연도에 따라 코드가 달라진다. 코드가 같은지만 보고 시계열을 이으면 그 품목은 도중에 끊기거나 엉뚱하게 이어진다.</p>
       <p><b>얼마나 큰 문제인가.</b> 2022년 개정 하나로 한국 수출액의 13~14%가 새 코드로 옮겨 갔다. 코드 하나에 수백억 달러가 걸려 있다. 메모리형 복합부품 집적회로(<code>8542324030</code>)는 2017~21년 누적 446.8억 달러를 찍고 2021년 12월에 사라지는데, 같은 물건이 2022년 1월 신설된 <code>8542324000</code>에서 다시 시작한다. 통신기기 부분품(<code>8517701023</code>, 누적 323.4억 달러)의 물량은 평판 디스플레이 모듈(<code>8524122000</code>)로 넘어간다. 원자료만 보면 앞의 코드는 2021년 12월에 소멸한 품목이고, 뒤의 코드는 2022년 1월에 무에서 생겨난 품목이다.</p>
-      <p><b>바뀌는 것은 HS만이 아니다.</b> 위 세 번은 국제 협약에 따른 개정이고, 한국은 그 아래 10자리를 따로 운영하므로 국내 품목분류 개정이 그 사이에도 일어난다. 2025년 1월 1일과 2026년 1월 2일 시행분이 그것이다. 앞의 것만으로도 코드 123개가 신설됐다. <b>개정 목록은 어디에도 정리되어 공표되지 않으므로</b>, 자료를 갱신할 때마다 코드의 첫 등장·마지막 등장이 몰리는 달을 직접 세어 확인해야 한다. 국제 개정만 세면 놓친다.</p>
-      <p><b>개수를 세는 지표가 특히 위험하다.</b> 금액을 다루는 분석은 상위 코드로 합치면 어느 정도 상쇄되지만, 목적지 수·품목 다양성·진입과 퇴출처럼 <b>코드를 세는 지표</b>는 개정 신설 코드에서 값이 왜곡된다. 신생 코드는 "여러 나라로 빠르게 퍼지는 신흥 품목"의 모습을 띠는데, 이는 실적이 아니라 코드가 새것이기 때문이다.</p>
+      <p><b>바뀌는 것은 HS만이 아니다.</b> 위 세 번은 국제 협약에 따른 개정이고, 한국은 그 아래 10자리를 따로 운영하므로 국내 품목분류 개정이 그 사이에도 일어난다. 2025년 1월 1일과 2026년 1월 2일 시행분이 그것이다. 앞의 것만으로도 코드 123개가 신설됐다. 개정 목록은 어디에도 정리되어 공표되지 않으므로, 자료를 갱신할 때마다 코드의 첫 등장·마지막 등장이 몰리는 달을 직접 세어 확인해야 한다. 국제 개정만 세면 놓친다.</p>
+      <p><b>개수를 세는 지표가 특히 위험하다.</b> 금액을 다루는 분석은 상위 코드로 합치면 어느 정도 상쇄되지만, 목적지 수·품목 다양성·진입과 퇴출처럼 코드를 세는 지표는 개정 신설 코드에서 값이 왜곡된다. 신생 코드는 "여러 나라로 빠르게 퍼지는 신흥 품목"의 모습을 띠는데, 이는 실적이 아니라 코드가 새것이기 때문이다.</p>
     </div>
 
     <div class="stats">
@@ -552,14 +510,14 @@
     </div>
 
     <h3>두 층위는 성격이 다르다</h3>
-    <p>이 DB는 개정 연결을 두 해상도로 제공한다. 둘을 하나로 합치지 않고 테이블을 나눈 이유는 <b>근거의 성격이 다르기 때문</b>이다. 6자리 연계는 관세청이 공표한 표를 그대로 옮긴 것이고, 10자리 연계는 공식 표가 없어 우리가 추정한 것이다. 아래 표는 그 차이를 정리한 것이다.</p>
+    <p>이 DB는 개정 연결을 두 해상도로 제공한다. 둘을 하나로 합치지 않고 테이블을 나눈 이유는 근거의 성격이 다르기 때문이다. 6자리 연계는 관세청이 공표한 표를 그대로 옮긴 것이고, 10자리 연계는 공식 표가 없어 우리가 추정한 것이다. 아래 표는 그 차이를 정리한 것이다.</p>
     <div class="tblwrap">
       <table>
         <caption>HS6 연계와 HS10 연계</caption>
         <thead><tr><th></th><th>HS6 연계</th><th>HS10 연계</th></tr></thead>
         <tbody>
           <tr><td>테이블</td><td><code>dim_hs6_concordance</code></td><td><code>dim_hs10_concordance</code>, <code>dim_hs10_to_2022</code></td></tr>
-          <tr><td>근거</td><td><b>공표된 사실</b> — 관세청 공식 연계표</td><td><b>추정</b> — 공식 승계표가 존재하지 않음</td></tr>
+          <tr><td>근거</td><td>공표된 사실 — 관세청 공식 연계표</td><td>추정 — 공식 승계표가 존재하지 않음</td></tr>
           <tr><td>원천</td><td>관세청 FTA 포털 연계표 PDF 3종</td><td>기재부 고시 별표 전문 PDF(국가법령정보센터)</td></tr>
           <tr><td>구축</td><td>2026-07</td><td>2026-08</td></tr>
           <tr><td>행수</td><td>18,944</td><td>50,864 + 75,719</td></tr>
@@ -575,49 +533,49 @@
       <p><b>자료.</b> 관세청 FTA 포털이 원산지 판정용으로 공개하는 연계표 PDF 3종을 썼다(HS2022→2007 6,592쌍, →2012 6,415쌍, →2017 5,937쌍). 2열(HS2022 6자리, 과거 6자리)의 순수 코드쌍이라 페이지당 표 하나로 정확히 추출된다. 병합셀도 다단 머리글도 없다.</p>
       <p><b>HS2022를 허브로 하는 별 모양 구조.</b> 세 연계표는 모두 최신판 HS2022를 기준점으로 삼아 과거 각 판본에 대응한다. 2007을 직접 2012에 잇는 표는 없지만, 가장 먼 2022→2007 표가 전 구간을 덮으므로 세 표를 결합하면 2007~2022 전체가 연결된다.</p>
       <p><b>다대다를 그대로 둔다.</b> 개정은 단순 이름 변경이 아니다. 2022년 <code>010130</code>은 2007년 <code>010110</code>과 <code>010190</code> 둘 모두에 대응한다. DB는 이 다대다에 억지 규칙을 세우지 않고 있는 그대로 보존한다. "어느 코드들을 같은 상품군으로 묶을 것인가"는 분석 계층의 판단이다.</p>
-      <p><b>커버리지 실측.</b> 종수 기준으로 재면 2007기 66.1%, 2012기 71.1%, 2017기 80.8%로 낮아 보이지만, 이 수치는 전 기간에 한 판본을 일괄 적용한 <b>가정적 상한</b>이다. 시기별로 올바른 판본을 골라 거래액 기준으로 재면 미매칭은 <b>0.004~0.007%</b>에 그친다. 어느 판본에도 대응이 없는 완전 사각지대는 130종, 거래액의 0.004%다.</p>
-      <p class="sub" style="margin:6px 0 0"><b>보완이 필요한 지점.</b> 거래액 기준으로는 무시할 수준이지만, <b>개수를 세는 분석</b>에서는 미매칭 종수(2007기 124종·2012기 63종·2017기 34종)가 진입·퇴출 계수에 관여한다. 이 경우 아래 HS10 연계를 쓰거나, 미매칭 코드를 명시적으로 제외하고 그 사실을 밝혀야 한다.</p>
+      <p><b>커버리지 실측.</b> 종수 기준으로 재면 2007기 66.1%, 2012기 71.1%, 2017기 80.8%로 낮아 보이지만, 이 수치는 전 기간에 한 판본을 일괄 적용한 가정적 상한이다. 시기별로 올바른 판본을 골라 거래액 기준으로 재면 미매칭은 0.004~0.007%에 그친다. 어느 판본에도 대응이 없는 완전 사각지대는 130종, 거래액의 0.004%다.</p>
+      <p class="sub"><b>보완이 필요한 지점.</b> 거래액 기준으로는 무시할 수준이지만, 개수를 세는 분석에서는 미매칭 종수(2007기 124종·2012기 63종·2017기 34종)가 진입·퇴출 계수에 관여한다. 이 경우 아래 HS10 연계를 쓰거나, 미매칭 코드를 명시적으로 제외하고 그 사실을 밝혀야 한다.</p>
     </div>
 
     <h3>HS10 연계 (2026-08 구축)</h3>
 
     <h4>공식 승계표는 어디에도 없다</h4>
     <div class="panel">
-      <p>HS10 뒤 4자리는 한국이 국내 필요에 따라 붙인 자리(HSK)라 국제 연계표에 없다. 그러면 관세청이 따로 내겠거니 싶지만, 전수로 확인한 결과 <b>어느 기관도 HS10 승계표를 공표하지 않는다.</b></p>
+      <p>HS10 뒤 4자리는 한국이 국내 필요에 따라 붙인 자리(HSK)라 국제 연계표에 없다. 그러면 관세청이 따로 내겠거니 싶지만, 전수로 확인한 결과 어느 기관도 HS10 승계표를 공표하지 않는다.</p>
       <ul>
-        <li>관세법령정보포털(CLIP)의 <b>세계HS개정표</b>는 세계관세기구의 6자리 상관표다. <b>HS비교</b>는 연도별 관세율표를 나란히 보여줄 뿐 행이 대응되지 않는다.</li>
-        <li>관세청이 "연계표"라는 이름으로 내는 것은 6자리이거나, 한-미·한-유럽연합처럼 <b>국가 사이</b>의 10자리 연계다. 시기 사이의 연계가 아니다.</li>
-        <li>기획재정부 고시에 <b>신구대비표</b>가 첨부돼 있다(2012·2014년 개정분). 2012년분 221쪽을 전부 파싱해 4,437행을 뽑아 보니 폐지 646건, 신설 1,009건, 좌우에 코드가 모두 있는 112건이었는데 <b>그 112건은 전부 좌우 코드가 같다.</b> 품명만 바뀐 행이다. 승계를 잇는 행은 한 건도 없다.</li>
+        <li>관세법령정보포털(CLIP)의 세계HS개정표는 세계관세기구의 6자리 상관표다. HS비교는 연도별 관세율표를 나란히 보여줄 뿐 행이 대응되지 않는다.</li>
+        <li>관세청이 "연계표"라는 이름으로 내는 것은 6자리이거나, 한-미·한-유럽연합처럼 국가 사이의 10자리 연계다. 시기 사이의 연계가 아니다.</li>
+        <li>기획재정부 고시에 신구대비표가 첨부돼 있다(2012·2014년 개정분). 2012년분 221쪽을 전부 파싱해 4,437행을 뽑아 보니 폐지 646건, 신설 1,009건, 좌우에 코드가 모두 있는 112건이었는데 그 112건은 전부 좌우 코드가 같다. 품명만 바뀐 행이다. 승계를 잇는 행은 한 건도 없다.</li>
       </ul>
-      <p class="sub" style="margin:6px 0 0">즉 이 문서들은 <b>무엇이 사라지고 무엇이 생겼는지</b>만 알려 주고 <b>무엇이 무엇으로 갔는지</b>는 알려 주지 않는다. 그 연결은 만들어야 한다.</p>
+      <p class="sub">즉 이 문서들은 무엇이 사라지고 무엇이 생겼는지만 알려 주고 무엇이 무엇으로 갔는지는 알려 주지 않는다. 그 연결은 만들어야 한다.</p>
     </div>
 
     <h4>자료 — 연도별 별표 전문</h4>
     <div class="panel">
-      <p>승계는 없어도 <b>그해에 유효했던 코드와 품명의 전체 목록</b>은 구할 수 있다. 「관세ㆍ통계통합품목분류표」는 기획재정부 고시이고, 그 별표 전문이 국가법령정보센터에 붙어 있다. 인증 없이 OpenAPI로 받는다.</p>
+      <p>승계는 없어도 그해에 유효했던 코드와 품명의 전체 목록은 구할 수 있다. 「관세ㆍ통계통합품목분류표」는 기획재정부 고시이고, 그 별표 전문이 국가법령정보센터에 붙어 있다. 인증 없이 OpenAPI로 받는다.</p>
       <pre><code>lawSearch.do?OC=test&amp;target=admrul&amp;type=XML&amp;query=관세·통계통합품목분류표&amp;nw=2
 lawService.do?OC=test&amp;target=admrul&amp;ID=&lt;행정규칙일련번호&gt;&amp;type=XML
 law.go.kr/flDownload.do?flSeq=&lt;첨부일련번호&gt;</code></pre>
-      <p>2011·2013·2015·2017·2021·2022·2025·2026년 판을 받아 <code>data/external/HSK_별표/</code>에 두었다. 2022년 이후는 엑셀도 제공되지만 <b>쓰지 않는다.</b> HSK에는 7자리·9자리 중간 표제가 있어 코드 조각이 <code>9</code>(9자리 표제)와 <code>09</code>(10자리)로 갈리는데, 엑셀은 숫자 셀이라 둘 다 9로 저장하고 <code>00</code>도 0으로 만든다. 엑셀로 파싱한 2022년 코드는 11,463개, PDF로 파싱하면 <b>11,293개</b>로 공식 발표 수치와 정확히 일치한다.</p>
+      <p>2011·2013·2015·2017·2021·2022·2025·2026년 판을 받아 <code>data/external/HSK_별표/</code>에 두었다. 2022년 이후는 엑셀도 제공되지만 쓰지 않는다. HSK에는 7자리·9자리 중간 표제가 있어 코드 조각이 <code>9</code>(9자리 표제)와 <code>09</code>(10자리)로 갈리는데, 엑셀은 숫자 셀이라 둘 다 9로 저장하고 <code>00</code>도 0으로 만든다. 엑셀로 파싱한 2022년 코드는 11,463개, PDF로 파싱하면 11,293개로 공식 발표 수치와 정확히 일치한다.</p>
     </div>
 
     <h4>절차</h4>
     <p>구축은 <code>scripts/03c_build_hs10_concordance.py</code> 한 스크립트가 처음부터 끝까지 수행한다. 여섯 단계다.</p>
     <div class="panel">
       <ol class="principle">
-        <li><b>별표 파싱.</b> PDF에 격자선은 없지만 열 x좌표가 고정이다. 낱말을 성격(숫자·한글·로마자)으로 갈라 각 무리의 최빈 x를 열 기준으로 삼고, 줄을 y로 묶어 HS4 열에 낱말이 있는 줄에서 새 레코드를 연다. 판본마다 좌표가 몇 pt씩 흔들리므로 고정 허용오차가 아니라 이웃 열의 중간점을 경계로 쓴다. 이때 <b>계층 경로 품명</b>(부모 품명을 뿌리부터 이어 붙인 문자열)도 함께 만든다. 쪽번호(<code>- 314 -</code>)가 그 쪽 마지막 행의 품명 꼬리에 붙는 함정이 있는데, 정규식으로 지우면 <code>폴리아미드 -6</code>(나일론 6)이 함께 깨지고 숫자만인 줄을 버리면 품명 칸이 빈 데이터 행 14개가 사라진다. 쪽번호가 찍히는 y좌표를 문서마다 찾아 그 줄만 버려야 한다.</li>
+        <li><b>별표 파싱.</b> PDF에 격자선은 없지만 열 x좌표가 고정이다. 낱말을 성격(숫자·한글·로마자)으로 갈라 각 무리의 최빈 x를 열 기준으로 삼고, 줄을 y로 묶어 HS4 열에 낱말이 있는 줄에서 새 레코드를 연다. 판본마다 좌표가 몇 pt씩 흔들리므로 고정 허용오차가 아니라 이웃 열의 중간점을 경계로 쓴다. 이때 계층 경로 품명(부모 품명을 뿌리부터 이어 붙인 문자열)도 함께 만든다. 쪽번호(<code>- 314 -</code>)가 그 쪽 마지막 행의 품명 꼬리에 붙는 함정이 있는데, 정규식으로 지우면 <code>폴리아미드 -6</code>(나일론 6)이 함께 깨지고 숫자만인 줄을 버리면 품명 칸이 빈 데이터 행 14개가 사라진다. 쪽번호가 찍히는 y좌표를 문서마다 찾아 그 줄만 버려야 한다.</li>
         <li><b>개정 전후 비교.</b> 두 판의 HS10 집합을 맞대어 존속·소멸·신설을 가른다. 2022년 개정은 존속 9,886, 소멸 2,354, 신설 1,407이다.</li>
-        <li><b>허용 그래프.</b> 어느 (개정 전 코드, 개정 후 코드) 쌍을 후보로 둘지가 이 방법의 가설이다. 두 조건으로 자른다. 첫째, <b>공식 HS6 연계표가 이어 주는 6자리 쌍만</b> 후보다 — 국가 재량인 뒤 4자리는 6자리 이동을 따라가므로 공식 자료로 후보를 좁힐 수 있다. 둘째, <b>개정 전후에 모두 살아 있는 서로 다른 코드끼리는 이동을 막는다</b> — 개정이 건드리지 않은 코드는 내용이 오갈 이유가 없다.</li>
+        <li><b>허용 그래프.</b> 어느 (개정 전 코드, 개정 후 코드) 쌍을 후보로 둘지가 이 방법의 가설이다. 두 조건으로 자른다. 첫째, 공식 HS6 연계표가 이어 주는 6자리 쌍만 후보다 — 국가 재량인 뒤 4자리는 6자리 이동을 따라가므로 공식 자료로 후보를 좁힐 수 있다. 둘째, 개정 전후에 모두 살아 있는 서로 다른 코드끼리는 이동을 막는다 — 개정이 건드리지 않은 코드는 내용이 오갈 이유가 없다.</li>
         <li><b>사전가중.</b> 잎 품명과 계층 경로 품명의 유사도를 6:4로 섞어 8제곱한다. 10자리 품명은 "기타"가 태반이라 그 자체로는 변별력이 없고, 반대로 경로만 쓰면 같은 호 아래에서 앞부분이 길게 겹쳐 "자동차 휘발유"와 "나프타"가 같은 점수를 받는다. 같은 코드끼리는 유사도를 1로 둔다.</li>
-        <li><b>이중비례조정(IPF).</b> 행합을 개정 직전 6개월 수출액에, 열합을 직후 6개월 수출액에 번갈아 맞춘다(400회). 허용 그래프 위에서만 움직이므로 실제로 옮겨 간 만큼만 대각선에서 떨어져 나간다. 살아남은 코드가 내용의 <b>일부만</b> 잃는 경우도 이 단계에서 처리된다 — 평판 디스플레이 모듈이 그 예다.</li>
+        <li><b>이중비례조정(IPF).</b> 행합을 개정 직전 6개월 수출액에, 열합을 직후 6개월 수출액에 번갈아 맞춘다(400회). 허용 그래프 위에서만 움직이므로 실제로 옮겨 간 만큼만 대각선에서 떨어져 나간다. 살아남은 코드가 내용의 일부만 잃는 경우도 이 단계에서 처리된다 — 평판 디스플레이 모듈이 그 예다.</li>
         <li><b>연쇄와 보완.</b> 세 개정을 이어 곱해 과거 체계에서 현행 체계로 한 번에 가는 표를 만든다. 2011년 이전에 사라진 코드는 별표가 없어 연쇄에 못 드므로, 공식 HS6 연계표가 허용하는 현행 6자리로 보내고 그 안에서 2022년 교역액 비중으로 나눈다(<code>method='hs6_fallback'</code>).</li>
       </ol>
     </div>
 
     <h4>검증 — 단차가 줄었다는 것은 검증이 아니다</h4>
     <div class="panel">
-      <p>연계의 목적은 개정 전후 계열이 끊기는 것을 없애는 데 있다. 그런데 채택한 이중비례조정은 열합을 개정 직후 수출액에 맞추므로 <b>그 끊김은 정의상 사라진다.</b> 이것을 검증으로 내밀면 순환논법이다.</p>
-      <p>대신 <b>위약 검정</b>을 쓴다. 같은 허용 그래프에 개정이 없는 구간(개정 1년 전 같은 여섯 달 짝)을 물린다. 개정이 없으니 값이 제자리를 떠날 이유가 없고, 그런데도 떠나는 몫이 이 방법의 잡음 바닥이다. 아래 표의 두 열을 견주면 개정이 실제로 옮긴 몫과 방법이 만들어 낸 몫이 갈린다.</p>
+      <p>연계의 목적은 개정 전후 계열이 끊기는 것을 없애는 데 있다. 그런데 채택한 이중비례조정은 열합을 개정 직후 수출액에 맞추므로 그 끊김은 정의상 사라진다. 이것을 검증으로 내밀면 순환논법이다.</p>
+      <p>대신 위약 검정을 쓴다. 같은 허용 그래프에 개정이 없는 구간(개정 1년 전 같은 여섯 달 짝)을 물린다. 개정이 없으니 값이 제자리를 떠날 이유가 없고, 그런데도 떠나는 몫이 이 방법의 잡음 바닥이다. 아래 표의 두 열을 견주면 개정이 실제로 옮긴 몫과 방법이 만들어 낸 몫이 갈린다.</p>
       <div class="tblwrap">
         <table>
           <caption>대각선 보존율 — 제자리에 남은 수출액 비중 (%)</caption>
@@ -625,11 +583,11 @@ law.go.kr/flDownload.do?flSeq=&lt;첨부일련번호&gt;</code></pre>
           <tbody>
             <tr><td>2012</td><td>96.84</td><td>99.88</td><td>3.04%p</td></tr>
             <tr><td>2017</td><td>93.00</td><td>99.32</td><td>6.32%p</td></tr>
-            <tr><td>2022</td><td>85.67</td><td>97.94</td><td><b>12.27%p</b></td></tr>
+            <tr><td>2022</td><td>85.67</td><td>97.94</td><td>12.27%p</td></tr>
           </tbody>
         </table>
       </div>
-      <p>개정 규모가 2022 &gt; 2017 &gt; 2012 순인 것은 알려진 사실과 맞는다. 이 검정은 실제로 설계를 고쳤다. 절차 3의 두 번째 조건(살아 있는 코드끼리 이동 금지)을 넣기 전에는 2022년 위약 보존율이 <b>83.30%</b>였다. 개정이 없는데도 수출액의 17%가 자리를 옮겼다는 뜻이고, 디램과 플래시 메모리 사이, 경유와 제트 연료유 사이에 값이 양방향으로 오갔다. 네 코드 모두 개정 전후에 그대로 있는 코드다. 조건 하나로 잡음이 2.06%까지 내려갔다.</p>
+      <p>개정 규모가 2022 &gt; 2017 &gt; 2012 순인 것은 알려진 사실과 맞는다. 이 검정은 실제로 설계를 고쳤다. 절차 3의 두 번째 조건(살아 있는 코드끼리 이동 금지)을 넣기 전에는 2022년 위약 보존율이 83.30%였다. 개정이 없는데도 수출액의 17%가 자리를 옮겼다는 뜻이고, 디램과 플래시 메모리 사이, 경유와 제트 연료유 사이에 값이 양방향으로 오갔다. 네 코드 모두 개정 전후에 그대로 있는 코드다. 조건 하나로 잡음이 2.06%까지 내려갔다.</p>
     </div>
 
     <h4>완성도</h4>
@@ -657,11 +615,12 @@ law.go.kr/flDownload.do?flSeq=&lt;첨부일련번호&gt;</code></pre>
         </tbody>
       </table>
     </div>
-    <p class="sub" style="margin:2px 0 0">2021년까지가 되짚은 값이고 2022년부터가 원자료다. 원자료만 보면 네 계열 모두 2022년 1월 이전이 비어 있다.</p>
+    <p class="sub">2021년까지가 되짚은 값이고 2022년부터가 원자료다. 원자료만 보면 네 계열 모두 2022년 1월 이전이 비어 있다.</p>
 
     <h4>한계</h4>
-    <div class="note">
+    <div class="note warn">
       <b>이 연계는 추정이다.</b> 공식 HS6 연계표가 후보의 범위를 정하고 품명이 그 안에서 짝을 고른 것이지, 관세청이 확인해 준 것이 아니다. 위약 검정은 방법이 평상시 변동을 이동으로 오인하지 않는다는 것만 보이고, 고른 짝이 옳다는 것은 보이지 않는다. 논문에 쓸 때는 이 점을 밝혀야 한다.
+      <code>dim_hs10_concordance</code>와 <code>dim_hs10_to_2022</code>는 공표된 연계표가 아니라 이 DB가 고시 별표에서 추정한 연결이며, 관세청·기획재정부의 공식 판단이 아니다.
     </div>
     <ul>
       <li><b>나뉜 비율은 관측값이 아니다.</b> 하나의 코드가 여럿으로 갈릴 때 그 비율은 개정 직후 여섯 달의 수출액 분포에서 나온다. 그때 어느 한쪽이 부진했다면 그 왜곡이 과거 전체에 실린다. 창 길이 6개월도 관행일 뿐 근거가 있는 것은 아니다.</li>
@@ -671,16 +630,16 @@ law.go.kr/flDownload.do?flSeq=&lt;첨부일련번호&gt;</code></pre>
     </ul>
 
     <h3>덤 — 폐지코드 품명을 되찾다</h3>
-    <p>별표를 파싱하면서 오래 막혀 있던 문제 하나가 함께 풀렸다. <code>dim_hs10</code>의 품명 커버리지는 72.8%다. 관세청 HS부호 파일이 2026년 유효 코드만 담아, 2007~2021년에만 존재하다 폐지된 <b>4,194종의 이름이 비어 있었다.</b> 과거 스냅샷은 공공데이터포털에 없어 미해결로 남아 있던 항목이다. 그런데 별표에는 그해 유효했던 코드 전부의 품명이 있으므로, 그중 <b>3,738종(89.1%, 폐지코드 거래액의 94.1%)</b>을 되찾을 수 있었다.</p>
-    <p><b>다만 <code>dim_hs10</code>에 열로 넣지는 않았다.</b> 품명이 판본에 따라 변하기 때문이다 — 15,255종 가운데 <b>4,806종(31.5%)</b>이 판본별로 다른 품명을 갖는다. 표기를 다듬은 것만이 아니라 젖소가 번식용으로, 우모분이 깃털가루로, 골분이 뼛가루로 바뀐다. <code>dim_hs10</code>의 키는 <code>hs10</code> 하나이므로 열로 넣으면 여러 참값 중 하나만 남고 나머지는 사라진다. 어느 해에 이름이 바뀌었는지도 자료다.</p>
-    <p>그래서 <code>(hs10, 별표연도)</code>를 키로 하는 별도 테이블 <code>dim_hs10_name_hist</code>(72,129행)에 원문 그대로 쌓았다. <code>dim_hs10</code>은 손대지 않았으므로 "정직한 NULL" 정책도, 기존 쿼리도 그대로다. 관세청 <code>dim_hs10</code>과 2022년 별표가 겹치는 11,267종에서 품명이 <b>98.5% 일치</b>한다 — 출처가 달라도 같은 값을 준다.</p>
+    <p>별표를 파싱하면서 오래 막혀 있던 문제 하나가 함께 풀렸다. <code>dim_hs10</code>의 품명 커버리지는 72.8%다. 관세청 HS부호 파일이 2026년 유효 코드만 담아, 2007~2021년에만 존재하다 폐지된 4,194종의 이름이 비어 있었다. 과거 스냅샷은 공공데이터포털에 없어 미해결로 남아 있던 항목이다. 그런데 별표에는 그해 유효했던 코드 전부의 품명이 있으므로, 그중 3,738종(89.1%, 폐지코드 거래액의 94.1%)을 되찾을 수 있었다.</p>
+    <p><b>다만 <code>dim_hs10</code>에 열로 넣지는 않았다.</b> 품명이 판본에 따라 변하기 때문이다 — 15,255종 가운데 4,806종(31.5%)이 판본별로 다른 품명을 갖는다. 표기를 다듬은 것만이 아니라 젖소가 번식용으로, 우모분이 깃털가루로, 골분이 뼛가루로 바뀐다. <code>dim_hs10</code>의 키는 <code>hs10</code> 하나이므로 열로 넣으면 여러 참값 중 하나만 남고 나머지는 사라진다. 어느 해에 이름이 바뀌었는지도 자료다.</p>
+    <p>그래서 <code>(hs10, 별표연도)</code>를 키로 하는 별도 테이블 <code>dim_hs10_name_hist</code>(72,129행)에 원문 그대로 쌓았다. <code>dim_hs10</code>은 손대지 않았으므로 "정직한 NULL" 정책도, 기존 쿼리도 그대로다. 관세청 <code>dim_hs10</code>과 2022년 별표가 겹치는 11,267종에서 품명이 98.5% 일치한다 — 출처가 달라도 같은 값을 준다.</p>
     <pre><code>-- 폐지코드를 포함해 아무 HS10이나 이름을 얻는다(가장 최근 판본 우선)
 SELECT hs10, name_ko FROM dim_hs10_name_hist
 QUALIFY ROW_NUMBER() OVER (PARTITION BY hs10 ORDER BY byeolpyo_year DESC) = 1;</code></pre>
-    <p class="sub" style="margin:2px 0 0">덮지 못한 456종은 대부분 2011년 이전에 폐지된 코드다. 별표가 2011년부터라 그 이전에 사라진 것은 이름을 얻을 수 없다.</p>
+    <p class="sub">덮지 못한 456종은 대부분 2011년 이전에 폐지된 코드다. 별표가 2011년부터라 그 이전에 사라진 것은 이름을 얻을 수 없다.</p>
 
     <h3>쓰는 법</h3>
-    <p>과거 자료에 그 시점의 판본을 붙여 조인하고, 금액에 <code>weight</code>를 곱한 뒤 <code>hs2022</code>로 다시 집계한다. 2022년 이후 자료는 이미 현행 체계이므로 변환하지 않고 그대로 이어 붙인다. <b>10자리 해상도가 필요하면 <code>method='chain'</code>으로 걸러야 한다</b> — <code>hs6_fallback</code>은 6자리로 흩뿌린 보완분이다.</p>
+    <p>과거 자료에 그 시점의 판본을 붙여 조인하고, 금액에 <code>weight</code>를 곱한 뒤 <code>hs2022</code>로 다시 집계한다. 2022년 이후 자료는 이미 현행 체계이므로 변환하지 않고 그대로 이어 붙인다. 10자리 해상도가 필요하면 <code>method='chain'</code>으로 걸러야 한다 — <code>hs6_fallback</code>은 6자리로 흩뿌린 보완분이다.</p>
     <pre><code>-- 과거 코드 체계를 현행(2022) 위로 옮겨 HS10 시계열을 잇는다
 SELECT c.hs2022, f.yyyymm, SUM(f.exp_dlr * c.weight) AS exp_dlr
 FROM fact_trade f
@@ -693,15 +652,15 @@ GROUP BY 1, 2
 UNION ALL
 SELECT hs10, yyyymm, SUM(exp_dlr) FROM fact_trade
 WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
-    <p class="sub" style="margin:2px 0 0">6자리로 충분한 분석이라면 <code>SUBSTR(hs10,1,6)</code>으로 자른 뒤 <code>dim_hs6_concordance</code>를 쓰는 편이 낫다. 공표된 자료이므로 추정을 설명할 필요가 없다.</p>
+    <p class="sub">6자리로 충분한 분석이라면 <code>SUBSTR(hs10,1,6)</code>으로 자른 뒤 <code>dim_hs6_concordance</code>를 쓰는 편이 낫다. 공표된 자료이므로 추정을 설명할 필요가 없다.</p>
   </section>
 
   <!-- ============ 데이터 함정 ============ -->
   <section role="tabpanel" id="tab-traps" aria-labelledby="t-traps">
     <h2 class="h">데이터 함정</h2>
     <p class="sub lead">DB를 만들며 실측으로 확인한, 모르고 쓰면 결과를 틀리게 만드는 지점들을 모았다.</p>
-    <div class="panel" style="margin-top:0">
-      <p>"함정"은 DB의 버그가 아니다. 대부분은 관세청 원본 데이터 자체의 특성이거나, 분석할 때 짚고 넘어가야 하는 주의점이다. 이 DB는 원본을 그대로 보존하는 것이 원칙이므로 이런 값들을 임의로 고치지 않는다 — 대신 여기에 미리 목록으로 드러내, 분석하는 연구자가 각자 상황에 맞게 처리하도록 한다. 아래 카드마다 <b>무엇이 문제이고, 왜 그런지, 어떻게 대응하는지</b>를 담았다.</p>
+    <div class="panel">
+      <p>"함정"은 DB의 버그가 아니다. 대부분은 관세청 원본 데이터 자체의 특성이거나, 분석할 때 짚고 넘어가야 하는 주의점이다. 이 DB는 원본을 그대로 보존하는 것이 원칙이므로 이런 값들을 임의로 고치지 않는다 — 대신 여기에 미리 목록으로 드러내, 분석하는 연구자가 각자 상황에 맞게 처리하도록 한다. 아래 카드마다 무엇이 문제이고, 왜 그런지, 어떻게 대응하는지를 담았다.</p>
     </div>
 
     <div class="traps">
@@ -753,7 +712,7 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
       <div class="trap">
         <div class="tref">폐지코드 · §2.1</div>
         <h4>hs10 폐지코드 품목명 NULL (72.8%)</h4>
-        <p>fact에 등장하는 hs10의 27.2%가 2026 HS부호 스냅샷에 없는 폐지코드라 dim_hs10 품목명이 NULL("정직한 NULL"). HS6 이하 해상도 분석은 hs6 절단으로 소거돼 무영향. HS10 세분 품목명을 쓰는 분석에서만 제약. <b>2026-08 해결:</b> 확보 경로는 data.go.kr이 아니라 국가법령정보센터의 연도별 HSK 별표였다. 4,194종 중 3,738종(89.1%, 폐지코드 거래액의 94.1%)의 국·영문 품명을 되찾아 <code>dim_hs10_name_hist</code>로 적재했다. <code>dim_hs10</code>은 그대로 두었다 — 품명이 판본에 따라 변해(31.5%) 키가 hs10 하나인 표에 열로 넣을 수 없다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭).</p>
+        <p>fact에 등장하는 hs10의 27.2%가 2026 HS부호 스냅샷에 없는 폐지코드라 dim_hs10 품목명이 NULL("정직한 NULL"). HS6 이하 해상도 분석은 hs6 절단으로 소거돼 무영향. HS10 세분 품목명을 쓰는 분석에서만 제약. 2026-08 해결: 확보 경로는 data.go.kr이 아니라 국가법령정보센터의 연도별 HSK 별표였다. 4,194종 중 3,738종(89.1%, 폐지코드 거래액의 94.1%)의 국·영문 품명을 되찾아 <code>dim_hs10_name_hist</code>로 적재했다. <code>dim_hs10</code>은 그대로 두었다 — 품명이 판본에 따라 변해(31.5%) 키가 hs10 하나인 표에 열로 넣을 수 없다(<a href="#" onclick="showTab('link');return false">HS 연계</a> 탭).</p>
       </div>
     </div>
 
@@ -767,8 +726,9 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
     <h2 class="h">받기·사용</h2>
     <p class="sub lead">DB를 받아 로컬 주피터에서 분석하려는 연구자에게 필요한 것을 안내한다.</p>
 
-    <p><b>먼저 알아둘 것 — 받을 것이 둘로 나뉜다.</b> 이 DB는 두 부분으로 배포된다. 하나는 <b>분석 코드·노트북·폴더 구조</b>가 담긴 GitHub <b>저장소</b>이고, 다른 하나는 <b>DB 파일 자체</b>(<code>kcsdb.duckdb</code>)다. DB 파일은 용량이 커서 GitHub 저장소에 넣을 수 없기 때문에(100MB 한도), <b>저장소는 clone으로 받고 DB 파일은 Releases에서 따로 받아</b> 저장소 안 정해진 자리에 놓는 방식이다.</p>
-    <p>전체 흐름은 네 단계다 — <b>패키지 설치 → 저장소 받기 → DB 파일 받아 배치 → 주피터에서 열기</b>. DB를 재구축하는 것이 아니라 이미 만들어진 DB를 받아 분석만 하므로 준비물은 가볍다(파이썬 패키지 4개). 순서대로 따라 하면 된다.</p>
+    <p><b>먼저 알아둘 것 — 받을 것이 둘로 나뉜다.</b> 이 DB는 두 부분으로 배포된다. 하나는 분석 코드·노트북·폴더 구조가 담긴 GitHub 저장소이고, 다른 하나는 DB 파일 자체(<code>kcsdb.duckdb</code>)다. DB 파일은 용량이 커서 GitHub 저장소에 넣을 수 없기 때문에(100MB 한도), 저장소는 clone으로 받고 DB 파일은 Releases에서 따로 받아 저장소 안 정해진 자리에 놓는 방식이다.</p>
+    <p>전체 흐름은 네 단계다 — 패키지 설치 → 저장소 받기 → DB 파일 받아 배치 → 주피터에서 열기. DB를 재구축하는 것이 아니라 이미 만들어진 DB를 받아 분석만 하므로 준비물은 가볍다(파이썬 패키지 4개). 순서대로 따라 하면 된다.</p>
+    <p><span class="ver"><!-- DB_VERSION:START -->내려받기 v1.0-202607 · 2026-08-31 게시<!-- DB_VERSION:END --></span></p>
 
     <ol class="steps">
       <li>
@@ -783,9 +743,9 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
         <ul>
           <li><code>notebooks/analysis_start.ipynb</code> — 시작용 분석 노트북 (4단계에서 연다)</li>
           <li><code>scripts/</code> · <code>docs/</code> · <code>data/external/</code> — 파이프라인 스크립트·문서·외부 참조자료</li>
-          <li><code>data/processed/</code> — <b>지금은 비어 있는</b> 폴더. 다음 단계에서 받을 DB를 여기에 놓는다.</li>
+          <li><code>data/processed/</code> — 지금은 비어 있는 폴더. 다음 단계에서 받을 DB를 여기에 놓는다.</li>
         </ul>
-        <p class="sub" style="margin:6px 0 0">즉 노트북은 이 저장소에 함께 들어 있어 따로 받을 필요가 없다. 오직 용량이 큰 DB 파일만 저장소에 없어서 다음 단계에서 따로 받는다.</p>
+        <p class="sub">즉 노트북은 이 저장소에 함께 들어 있어 따로 받을 필요가 없다. 오직 용량이 큰 DB 파일만 저장소에 없어서 다음 단계에서 따로 받는다.</p>
       </li>
       <li>
         <h4>DB 파일 받아서 배치</h4>
@@ -794,7 +754,7 @@ WHERE yyyymm &gt;= 202201 GROUP BY 1, 2;</code></pre>
           <li>Windows: 7-Zip 등으로 <code>.gz</code> 압축 해제</li>
           <li>Mac / Linux: 터미널에서 <code>gunzip kcsdb.duckdb.gz</code></li>
         </ul>
-        <p class="sub" style="margin:6px 0 0">노트북은 이 <code>data/processed/kcsdb.duckdb</code> 경로에서 DB를 읽으므로, 파일 이름과 위치를 그대로 맞춰 두는 것이 중요하다.</p>
+        <p class="sub">노트북은 이 <code>data/processed/kcsdb.duckdb</code> 경로에서 DB를 읽으므로, 파일 이름과 위치를 그대로 맞춰 두는 것이 중요하다.</p>
       </li>
       <li>
         <h4>주피터에서 열기</h4>
@@ -810,15 +770,86 @@ con = duckdb.connect("data/processed/kcsdb.duckdb", read_only=True)
 print(con.sql("SELECT COUNT(*) FROM fact_trade").fetchone())
 con.close()</code></pre>
 
-    <div class="note">
+    <div class="note warn">
       <b>단위 표기.</b> 금액은 미화 달러(USD) — 수출 FOB·수입 CIF 기준. 중량은 순중량 kg.<br>
       <b>범위 경계.</b> 월 실적은 최신 확정월까지이고 마지막 해는 부분년이므로 연도끼리 견줄 때는 제외한다. 정확한 범위는 <code>SELECT MIN(yyyymm), MAX(yyyymm) FROM fact_trade</code>로 확인한다.<br>
       <b>개정 경계.</b> 2012·2017·2022년 1월에 HS 품목코드가 바뀌고, 그 사이에도 국내 품목분류 개정이 있다(2025·2026년 1월). 이 경계를 넘는 시계열은 <code>dim_hs6_concordance</code>(6자리) 또는 <code>dim_hs10_to_2022</code>(10자리)로 이어야 하며, 그냥 코드가 같은지만 보면 계열이 끊긴다. 개정에 아예 흔들리지 않는 분류가 필요하면 <code>dim_hs10_to_nqi</code>(관세청 신성질별)를 쓴다 — 대신 758개로 해상도가 낮다. 쓰는 법은 <a href="#" onclick="showTab('link');return false">HS 연계</a> 탭에 있다.<br>
-      <b>다른 분류의 공식 집계.</b> 같은 통관 실적을 관세청이 다른 분류로 집계해 둔 것도 두 계열 들어 있다 — <code>fact_temper</code>(성질별, 1995~)와 <code>fact_nqi</code>(신성질별 × 국가, 2005~)다. HS 개정과 무관하고 <code>fact_trade</code>보다 기간이 길다. <b>같은 무역이므로 서로 더하면 안 된다.</b> 둘의 차이는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭에 있다.<br>
-      <b>10일 단위 자료.</b> 월 실적 말고도 10일 단위 잠정치(<code>fact_exp10d</code>, 뷰 <code>v_exp10d_seg</code>)가 들어 있다. 수출·수입 각각의 주요품목별·주요국가별 네 계열이며 <code>series</code>로 가른다. 월 통계보다 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 무엇이 얼마나 들어 있고 어디서 받았는지는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭의 <b>표 전체 목록</b>에 있다 — 행수와 기간은 DB를 읽어 자동으로 채운다.
+      <b>다른 분류의 공식 집계.</b> 같은 통관 실적을 관세청이 다른 분류로 집계해 둔 것도 두 계열 들어 있다 — <code>fact_temper</code>(성질별, 1995~)와 <code>fact_nqi</code>(신성질별 × 국가, 2005~)다. HS 개정과 무관하고 <code>fact_trade</code>보다 기간이 길다. 같은 무역이므로 서로 더하면 안 된다. 둘의 차이는 <a href="#" onclick="showTab('build');return false">DB 구축</a> 탭에 있다.<br>
+      <b>10일 단위 자료.</b> 월 실적 말고도 10일 단위 잠정치(<code>fact_exp10d</code>, 뷰 <code>v_exp10d_seg</code>)가 들어 있다. 수출·수입 각각의 주요품목별·주요국가별 네 계열이며 <code>series</code>로 가른다. 월 통계보다 빠른 대신 항목이 열 개씩뿐이고 중량이 없다. 무엇이 얼마나 들어 있고 어디서 받았는지는 아래 표 전체 목록에 있다.
     </div>
 
-    <p class="sub">위 안내는 이미 만들어진 DB를 <b>받아 쓰는 연구자</b>를 위한 것이다. 반대로 DB를 <b>만들어 나눠 주는 배포자(관리자)</b>—예컨대 새 월 데이터를 반영해 DB를 갱신하고 배포하는 사람—는 할 일이 다르다. DB 파일을 <code>.gz</code>로 압축하고, 그것을 GitHub Release에 첨부해 올리며, 관세청 API 인증키가 저장소에 실수로 올라가지 않도록 관리(<code>.gitignore</code> 처리)해야 한다. 이 배포 절차는 저장소 <code>docs/배포자_안내.md</code>에 정리돼 있다.</p>
+    <h3>무엇이 들어 있나 — 표 전체 목록</h3>
+    <p>이 DB는 관세청 공공데이터 여덟 갈래와 외부 참조 셋을 한 파일에 모은 것이다. 아래 표가 전부다. 행수와 기간은 DB를 직접 읽어 자동으로 채우므로 이 페이지가 실물보다 낡을 일이 없다. fact는 관세청이 준 실적을 그대로 담고, dim은 코드에 이름과 연결을 붙이며, mart는 이 저장소가 계산한 지표다. 계산한 것과 받은 것을 이름으로 갈라 두었으니 접두어만 보고 근거의 성격을 알 수 있다.</p>
+<!-- DB_INVENTORY:START -->
+    <div class="tblwrap">
+      <table class="inv">
+        <caption>이 DB에 들어 있는 것 전부 (행수·기간은 자동 갱신)</caption>
+        <thead><tr><th>테이블</th><th>담는 것</th><th class="r">행수</th><th>기간</th><th>출처</th></tr></thead>
+        <tbody>
+          <tr class="grp"><td colspan="5">fact — 관세청이 준 실적 그대로</td></tr>
+          <tr><td><code>fact_trade</code></td><td>국가 × HS10 품목 × 월 수출입 실적. 이 DB의 본체</td><td class="r">28,093,109</td><td class="s">2007.01–2026.07</td><td class="s">관세청 품목별 국가별 수출입실적(GW) · 공공데이터포털 15100475</td></tr>
+          <tr><td><code>fact_total</code></td><td>품목 구분 없는 국가 × 월 총계</td><td class="r">57,105</td><td class="s">2007.01–2026.07</td><td class="s">관세청 품목별 국가별 수출입실적(GW) · 15100475 (총계 응답)</td></tr>
+          <tr><td><code>fact_nqi</code></td><td>신성질별 × 국가 × 월 수출입 실적. 관세청이 직접 집계한 공식치라 HS 개정 추정이 섞이지 않는다. 이 표만 2005년부터다</td><td class="r">6,567,873</td><td class="s">2005.01–2026.07</td><td class="s">관세청 신성질별 수출입실적(GW) · 15101616</td></tr>
+          <tr><td><code>fact_temper</code></td><td>성질별 × 월 수출입 실적. 관세청 공식치이고 이 표만 1995년부터다. 10일 자료의 10대 품목이 이 분류로 정의되어, 품목 단위로 맞대 볼 수 있는 유일한 계열이다. 수출과 수입은 부호 체계가 서로 다르다</td><td class="r">123,965</td><td class="s">1995.01–2026.07</td><td class="s">관세청 성질별 수출입실적(GW) · 15102109</td></tr>
+          <tr><td><code>fact_exp10d</code></td><td>10일 단위 잠정치 네 계열(수출·수입 × 주요품목·주요국가). 값이 바뀔 때마다 새 행을 쌓아 관측 이력을 남긴다</td><td class="r">16,852</td><td class="s">2016.01–2026.08</td><td class="s">관세청 10일 단위 잠정치 · 15157908·15157941·15157901·15157909</td></tr>
+          <tr><td><code>fact_ip</code></td><td>산업별 광공업생산지수(2020=100) 월 계열. 생산·출하·재고의 원지수와 계절조정, 내수·수출 출하지수, 명절·조업일수 조정 총지수. 산업은 한국표준산업분류 소분류(3자리)까지이고 1995.01부터 전부 있다</td><td class="r">279,476</td><td class="s">1995.01–2026.07</td><td class="s">국가데이터처 광업제조업동향조사 · KOSIS DT_1F02001·DT_1F02016·DT_1F02061</td></tr>
+          <tr><td><code>fact_cli</code></td><td>경기종합지수(선행·동행·후행, 순환변동치)와 구성지표. 지수는 1970년, 구성지표 원계열은 2003년부터</td><td class="r">20,939</td><td class="s">1970.01–2026.07</td><td class="s">국가데이터처 경기종합지수(10차) · KOSIS DT_1C8015·DT_1C8016</td></tr>
+          <tr class="grp"><td colspan="5">dim — 코드에 이름과 연결을 붙이는 참조</td></tr>
+          <tr><td><code>dim_country</code></td><td>국가코드에 관세청 국명과 외교부 표준명·ISO2/3·대륙을 병기</td><td class="r">240</td><td class="s">—</td><td class="s">관세청 + 외교부 국가표준코드 · 15091117</td></tr>
+          <tr><td><code>dim_hs10</code></td><td>HS10 품목명(한/영)·수량/중량 단위·적용시작일</td><td class="r">11,327</td><td class="s">—</td><td class="s">관세청 HS부호 · 15049722</td></tr>
+          <tr><td><code>dim_hs6_concordance</code></td><td>HS 개정 사이 6자리 대응. 관세청 공표</td><td class="r">18,944</td><td class="s">—</td><td class="s">관세청 FTA 포털 HS 연계표</td></tr>
+          <tr><td><code>dim_hs10_concordance</code></td><td>개정 하나(2012·2017·2022)를 건너는 10자리 연결. 추정</td><td class="r">50,864</td><td class="s">—</td><td class="s">기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터</td></tr>
+          <tr><td><code>dim_hs10_to_2022</code></td><td>과거 체계를 현행 위로 한 번에 옮기는 10자리 연결. 추정</td><td class="r">75,719</td><td class="s">—</td><td class="s">기재부 고시 별표에서 이 저장소가 추정 · 국가법령정보센터</td></tr>
+          <tr><td><code>dim_hs10_name_hist</code></td><td>HS10 품명 이력. 폐지코드 이름이 여기 있다</td><td class="r">72,129</td><td class="s">—</td><td class="s">기재부 고시 「관세·통계통합품목분류표」 별표 · 국가법령정보센터</td></tr>
+          <tr><td><code>dim_nqi</code></td><td>신성질별 분류의 대·중·소·세·세세 5단 계층과 이름</td><td class="r">758</td><td class="s">—</td><td class="s">관세청 신성질별 분류 · 15049720</td></tr>
+          <tr><td><code>dim_hs10_to_nqi</code></td><td>HS10 → 신성질별. 현행 코드는 공표 대응, 폐지 코드는 추정 경유</td><td class="r">17,365</td><td class="s">—</td><td class="s">관세청 15049720 + 이 저장소 추정</td></tr>
+          <tr><td><code>dim_hs10_to_major10</code></td><td>HS10 → 수출 10대 품목. 관세청 공표치와 대조해 확정</td><td class="r">2,544</td><td class="s">—</td><td class="s">관세청 15049720 + 공표치 대조</td></tr>
+          <tr><td><code>dim_temper</code></td><td>성질별 부호의 이름과 4단 계층, 그리고 10대 품목 꼬리표. 이름은 API 응답에서 와 폐지부호까지 담고, 계층은 별표에서 온다</td><td class="r">334</td><td class="s">—</td><td class="s">관세청 성질별 수출입실적 15102109 + 신성질별 분류 15049720</td></tr>
+          <tr><td><code>dim_workday10d</code></td><td>상순·중순·하순의 일수와 조업일수. 10일 자료를 견주려면 필요하다</td><td class="r">1,185</td><td class="s">1995.01–2027.11</td><td class="s">한국천문연구원 특일정보 API로 대조한 공휴일 달력</td></tr>
+          <tr><td><code>dim_ksic</code></td><td>생산지수의 산업 코드 사전. 총지수·대분류·중분류·소분류 4층과 상위 코드</td><td class="r">115</td><td class="s">—</td><td class="s">국가데이터처 KOSIS DT_1F02001 항목 메타</td></tr>
+          <tr><td><code>dim_cli</code></td><td>경기종합지수 지표 코드의 이름</td><td class="r">56</td><td class="s">—</td><td class="s">국가데이터처 KOSIS 항목 메타</td></tr>
+          <tr class="grp"><td colspan="5">mart — 이 저장소가 계산한 지표</td></tr>
+          <tr><td><code>mart_exp10d_metrics</code></td><td>10일 자료 지표 — 조업일수 보정 전년 대비, 비중, 기여도, 진도율</td><td class="r">18,384</td><td class="s">2016.01–2026.08</td><td class="s">이 저장소가 계산</td></tr>
+          <tr><td><code>mart_exp10d_beta</code></td><td>항목별 조업일수 탄력성</td><td class="r">192</td><td class="s">—</td><td class="s">이 저장소가 추정</td></tr>
+          <tr><td><code>mart_exp10d_progress</code></td><td>진도율 분포(조업일 보정 전후)</td><td class="r">1,248</td><td class="s">—</td><td class="s">이 저장소가 계산</td></tr>
+          <tr><td><code>mart_exp10d_forecast</code></td><td>월 마감 예측과 구간</td><td class="r">4,416</td><td class="s">2019.01–2026.08</td><td class="s">이 저장소가 추정</td></tr>
+          <tr><td><code>mart_exp10d_fcskill</code></td><td>예측의 표본외 성적과 등급</td><td class="r">48</td><td class="s">—</td><td class="s">이 저장소가 계산</td></tr>
+          <tr><td><code>mart_exp10d_fclog</code></td><td>확정 전 예측의 기록(추가 전용)</td><td class="r">48</td><td class="s">—</td><td class="s">이 저장소가 계산</td></tr>
+          <tr><td><code>mart_nqi_check</code></td><td>신성질별 공식치와 우리 도출치의 월별 대조</td><td class="r">259</td><td class="s">2005.01–2026.07</td><td class="s">이 저장소가 계산</td></tr>
+          <tr class="grp"><td colspan="5">meta — 수집 기록</td></tr>
+          <tr><td><code>meta_calls</code></td><td>API 호출 기록. 무엇을 언제 몇 번 받았는지</td><td class="r">57,340</td><td class="s">—</td><td class="s">이 저장소의 수집 로그</td></tr>
+        </tbody>
+      </table>
+    </div><!-- DB_INVENTORY:END -->
+    <p class="sub">기간이 표마다 다르다. 월 실적(<code>fact_trade</code>)은 2007년부터, 신성질별 공식 실적(<code>fact_nqi</code>)은 2005년부터, 성질별 공식 실적(<code>fact_temper</code>)은 1995년부터, 10일 단위 잠정치는 2016년부터, 조업일수 달력은 2027년까지 미리 만들어 두었다.</p>
+
+    <h3>어디서 받았나</h3>
+    <p>원천은 공공데이터포털의 관세청 OpenAPI가 중심이고, 여기에 분류·달력 자료와 국가데이터처 KOSIS의 참조 통계가 더해진다. 모두 무료이며 활용신청은 자동승인이다(<code>15049720</code>은 신청도 필요 없다). 아래 표의 번호는 공공데이터포털 데이터셋 번호이고, KOSIS는 통계표 번호다.</p>
+    <div class="tblwrap">
+      <table>
+        <caption>원천 자료와 받는 방법</caption>
+        <thead><tr><th>원천</th><th>번호</th><th>이 DB에서</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>관세청 품목별 국가별 수출입실적(GW)</td><td><code>15100475</code></td><td>fact_trade · fact_total</td><td>월×국가 전수 호출. 엿새에 걸쳐 5만 회를 넘겼다</td></tr>
+          <tr><td>관세청 신성질별 수출입실적(GW)</td><td><code>15101616</code></td><td>fact_nqi</td><td>엔드포인트 <code>newtempertrade</code>. 필수 변수 <code>imexTpcd</code>(1=수출/2=수입). 연 단위로 44회면 끝난다</td></tr>
+          <tr><td>관세청 성질별 수출입실적(GW)</td><td><code>15102109</code></td><td>fact_temper · dim_temper</td><td>엔드포인트 <code>Idfytempertrade</code>. 연 단위로 64회면 끝난다. 1995년부터다</td></tr>
+          <tr><td>관세청 수출·수입 10일 단위 잠정치</td><td><code>15157908</code> <code>15157941</code><br><code>15157901</code> <code>15157909</code></td><td>fact_exp10d</td><td>주요품목별·주요국가별 각 수출입. 응답에 항목 이름이 없어 순서를 보도자료와 대조해 확정했다</td></tr>
+          <tr><td>관세청 HS부호</td><td><code>15049722</code></td><td>dim_hs10</td><td>품목명·단위·적용시작일</td></tr>
+          <tr><td>관세청 신성질별 분류</td><td><code>15049720</code></td><td>dim_nqi · dim_hs10_to_nqi · dim_hs10_to_major10</td><td>신청 불요·연간 갱신</td></tr>
+          <tr><td>외교부 국가표준코드</td><td><code>15091117</code></td><td>dim_country</td><td>표준 국명·ISO2/3·대륙</td></tr>
+          <tr><td>관세청 FTA 포털 HS 연계표</td><td>—</td><td>dim_hs6_concordance</td><td>6자리 개정 대응. 공표된 사실</td></tr>
+          <tr><td>기재부 고시 「관세·통계통합품목분류표」 별표</td><td>—</td><td>dim_hs10_concordance · dim_hs10_to_2022 · dim_hs10_name_hist</td><td>국가법령정보센터 PDF. 10자리 연결은 여기서 이 저장소가 추정한 것이다</td></tr>
+          <tr><td>한국천문연구원 특일정보 API</td><td>—</td><td>dim_workday10d</td><td>공휴일 달력을 전수 대조해 조업일수를 계산</td></tr>
+          <tr><td>국가데이터처 광업제조업동향조사</td><td><code>DT_1F02001</code><br><code>DT_1F02016</code><br><code>DT_1F02061</code></td><td>fact_ip · dim_ksic</td><td>KOSIS OpenAPI. 광공업생산지수를 한국표준산업분류 소분류까지. 수출과 견줄 국내 생산 쪽 계열이다</td></tr>
+          <tr><td>국가데이터처 경기종합지수(10차)</td><td><code>DT_1C8015</code><br><code>DT_1C8016</code></td><td>fact_cli · dim_cli</td><td>같은 KOSIS OpenAPI. 지수는 1970년, 구성지표 원계열은 2003년부터</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note warn">
+      <b>같은 무역을 세 분류로 담는다 — 알고 쓰는 것이 좋다.</b> <code>fact_trade</code>(HS10×국가)와 <code>fact_nqi</code>(신성질별×국가), <code>fact_temper</code>(성질별)는 같은 통관 실적을 서로 다른 분류로 집계한 것이다. 셋을 더하면 안 된다. HS10 해상도가 필요하면 첫째를, HS 개정에 흔들리지 않는 계열이 필요하면 둘째를, 10일 자료와 품목을 맞대거나 1995년까지 거슬러야 하면 셋째를 쓴다. <code>fact_nqi</code>를 따로 받아 둔 이유는 우리가 HS10에서 신성질별로 환산한 값이 옛 연도에서 정확하지 않기 때문이다 — 총액은 맞지만 세세분류 배분이 2007년 25%, 2017년 5% 어긋나고 2022년부터야 0.3%로 떨어진다. 그 대조를 <code>mart_nqi_check</code>가 월별로 남긴다.
+    </div>
+
+    <p class="sub">위 안내는 이미 만들어진 DB를 받아 쓰는 연구자를 위한 것이다. 반대로 DB를 만들어 나눠 주는 배포자(관리자)—예컨대 새 월 데이터를 반영해 DB를 갱신하고 배포하는 사람—는 할 일이 다르다. DB 파일을 <code>.gz</code>로 압축하고, 그것을 GitHub Release에 첨부해 올리며, 관세청 API 인증키가 저장소에 실수로 올라가지 않도록 관리(<code>.gitignore</code> 처리)해야 한다. 이 배포 절차는 저장소 <code>docs/배포자_안내.md</code>에 정리돼 있다.</p>
   </section>
 
   <!-- ============ 연구 ============ -->
@@ -884,7 +915,7 @@ con.close()</code></pre>
           <ul class="mono-bullets">
             <li>흑자 상위는 미국·베트남·홍콩, 적자 상위는 자원공급국(사우디·호주·카타르)과 일본·독일.</li>
             <li>흑자국 157개 &gt; 적자국 81개 — 순 +772억 달러(2025).</li>
-            <li>최대 변화: 대중국 수지가 2013년 +628억 정점 → <b>2023년 적자로 반전</b>.</li>
+            <li>최대 변화: 대중국 수지가 2013년 +628억 정점 → 2023년 적자로 반전.</li>
           </ul>
           <div class="mono-figs">
             <img src="data:image/png;base64,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" alt="2025년 양방향 무역수지 (흑자·적자 상위국)">
@@ -905,7 +936,7 @@ con.close()</code></pre>
           <p class="mono-chsub">개정 착시를 걷어낸 20년 품목 교체 (2007–2025)</p>
           <p class="mono-desc">새로 등장하고 사라진 HS6 품목을 세는 기술통계 챕터. 개수 지표라 HS 개정을 concordance로 이어야 정확하다 — 코드만 세면 개정으로 번호만 바뀐 것을 새 품목·사라진 품목으로 착각하게 된다.</p>
           <ul class="mono-bullets">
-            <li>코드만 세면 진입 941·퇴출 408 — 그러나 개정을 이으면 <b>실제는 진입 327·퇴출 326</b>.</li>
+            <li>코드만 세면 진입 941·퇴출 408 — 그러나 개정을 이으면 실제는 진입 327·퇴출 326.</li>
             <li>4,696종(약 93%)이 20년간 지속 — 품목 구성은 놀랍도록 안정적.</li>
             <li>진입·퇴출은 금액으로는 각각 0.3%·0.2%뿐 — 방산·전자담배·배터리소재 등 소액 품목이 조용히 교체.</li>
           </ul>
@@ -930,7 +961,7 @@ con.close()</code></pre>
           <ul class="mono-bullets">
             <li>칩은 거대한 흑자(2025년 +799억, 전체 수출의 20.7%) — 단일 품목군으로 압도적.</li>
             <li>제조장비는 20년 내내 적자(2025년 −147억, 수입이 수출의 2배).</li>
-            <li>칩은 아시아에 팔고, 장비는 <b>네덜란드(ASML)·일본·미국</b>에서 사온다.</li>
+            <li>칩은 아시아에 팔고, 장비는 네덜란드(ASML)·일본·미국에서 사온다.</li>
           </ul>
           <div class="mono-figs">
             <img src="data:image/png;base64,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" alt="2025년 반도체 3층 교역(칩·장비·소재)">
@@ -968,10 +999,7 @@ con.close()</code></pre>
 
 <footer>
   <div class="wrap">
-    <span class="ver"><!-- DB_VERSION:START -->내려받기 v1.0-202607 · 2026-08-31 게시<!-- DB_VERSION:END --></span>
-    <p><b>출처 표시 (공공누리 제1유형).</b> 관세청 HS부호(data.go.kr, 15049722) 및 관세청 FTA 포털 HS연계표는 공공누리 제1유형(출처표시)으로 개방된 저작물이다. 외교부 국가표준코드(15091117), 관세청 품목별 국가별 수출입실적(GW)(15100475), 관세청 성질별 수출입실적(GW)(15102109), 관세청 신성질별 수출입실적(GW)(15101616), 관세청 HSK별 신성질별·성질별 분류(15049720), 관세청 수출·수입 10일 단위 잠정치 통계(15157908·15157941·15157901·15157909), 기획재정부 고시 「관세ㆍ통계통합품목분류표」 별표(법제처 국가법령정보센터)를 함께 이용하였다.</p>
-    <p><b>추정 표시.</b> <code>dim_hs10_concordance</code>와 <code>dim_hs10_to_2022</code>는 공표된 연계표가 아니라 위 고시 별표에서 이 DB가 추정한 연결이다. 관세청·기획재정부의 공식 판단이 아니다.</p>
-    <p>본 저작물은 위 기관들이 개방한 공공데이터를 이용하였으며, 공공기관이 이 DB를 후원하거나 특수 관계에 있는 것으로 오인하게 하는 표시를 하지 않는다.</p>
+    <p><b>출처.</b> 관세청·외교부·기획재정부·국가데이터처·한국천문연구원이 개방한 공공데이터를 이용했다(<b>공공누리 제1유형</b>, 출처표시). 자료별 출처와 데이터셋 번호는 <a href="#" onclick="showTab('use');return false">받기·사용</a> 탭의 「어디서 받았나」에 있다. 공공기관이 이 DB를 후원하거나 특수 관계에 있지 않다. 이 저장소의 코드와 문서는 <a href="https://github.com/pilsunchoi/KCSDB2/blob/main/LICENSE" target="_blank" rel="noopener">MIT 라이선스</a>를 따르며, 원자료는 그 대상이 아니다(<a href="https://github.com/pilsunchoi/KCSDB2/blob/main/NOTICE.md" target="_blank" rel="noopener">NOTICE</a>).</p>
   </div>
 </footer>
 

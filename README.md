@@ -10,7 +10,7 @@
 <!-- DB_STATUS:START -->
 - 데이터 범위: 월 실적 2007.01–2026.07 (235개월), 240개국, HS10 15,406종, 28,093,109 거래행
 - 10일 단위 잠정치: 2016.01–2026.08, 4개 계열(수출·수입 × 품목·국가) 16,852행
-- DB 파일: 약 843MB
+- DB 파일: 약 847MB
 <!-- DB_STATUS:END -->
 - 설계 원칙: fact는 관세청 raw만. 파생·연결·참조는 전부 dim. 상세는 docs/DB_구축_원칙.md
 - 검증: 04_validate PASS 9, WARN 4, INFO 1, FAIL 0 (최근 실행 2026-08-29). WARN은 설계상 예상된 불완전이고 FAIL이 0인 것이 요점이다
@@ -56,6 +56,8 @@ DB를 처음부터 만들려면: data/raw 확보 → config·utils 배치 → �
 | 09_build_exp10d_dashboard.py | 10일 단위 수출 트렌드 대시보드 → `docs/exp10d.html`. CSS·JS·그림 전부 인라인이라 파일 하나로 열린다. **수치를 손으로 적지 않는다** — 07·08의 마트를 읽어 채운다. 08 이후 실행. **산출물은 아직 공개하지 않는다**(연구·개선 중이라 gitignore되어 있고 사이트에서도 링크하지 않는다) |
 | 10_fetch_newtemper.py | 신성질별 **국가별** 수출입실적 수집 → fact_nqi, mart_nqi_check. 공공데이터포털 15101616(`newtempertrade`), 2005.01~. **우리 도출로는 못 만드는 것**이라 받는다 — `dim_hs10_to_nqi` 도출치는 총액은 맞지만 세세분류 배분이 2007년 25%, 2017년 5% 어긋난다(2022년 이후는 0.3%). `mart_nqi_check`가 그 대조를 남긴다 |
 | 11_fetch_temper.py | **성질별** 수출입실적 수집 → fact_temper, dim_temper. 공공데이터포털 15102109(`Idfytempertrade`), **1995.01~**. 10일 잠정치의 10대 품목이 이 분류로 정의되므로 **품목 단위로 맞대 볼 수 있는 유일한 계열**이다 — 수출 37부호·수입 42부호를 묶어 2,794쌍을 대조하니 최대 격차가 0.0001%였다. 05의 검증 7이 이것을 매번 확인한다 |
+| 12_fetch_kosis.py | **광공업생산지수·경기종합지수** 수집 → fact_ip, dim_ksic, fact_cli, dim_cli. 국가데이터처 KOSIS OpenAPI(`DT_1F02001`·`DT_1F02016`·`DT_1F02061`·`DT_1C8015`·`DT_1C8016`). 무역 통계가 아니라 **수출입을 국내 생산·경기와 맞대 보려고** 들인 참조 계열이다. 계절조정·가중치 개편으로 과거값이 바뀌므로 부분 갱신 없이 늘 전부 다시 받는다(`--reload-only`로 검증만 재실행) |
+| 13_fetch_ecos.py | 수출입물가지수·교역조건지수(한국은행 ECOS) 수집. **적재한 결과는 DB에 넣지 않기로 했다**(2026-09-03 결정) — 스크립트와 원본은 다시 적재할 수 있게 남겨 둔다 |
 | utils/api_client.py | 관세청 OpenAPI 호출 래퍼. 00·01 공유. 재시도·오류코드 판정 |
 | utils/country_codes.py | 외교부 국가표준코드 CSV 로더. 00·01·03 공유 |
 | utils/byeolpyo.py | HSK 별표 PDF 파서. 03c·03d 공유. 열 좌표 복원·앞자리 0 보존·쪽번호 제거 |
@@ -117,6 +119,7 @@ python scripts\08_exp10d_forecast.py          # 월 마감 예측 (07 이후)
 python scripts\09_build_exp10d_dashboard.py   # docs/exp10d.html 생성 (08 이후)
 python scripts\10_fetch_newtemper.py          # 신성질별 국가별 실적 (선택·무거움)
 python scripts\11_fetch_temper.py             # 성질별 실적 (선택·64회면 끝난다)
+python scripts\12_fetch_kosis.py              # 생산지수·경기종합지수 (선택·2분)
 python scripts\04_validate.py                 # 통합 검증
 python scripts\06_db_status.py                # 문서의 현황 수치 자동 갱신
 ```
@@ -145,6 +148,7 @@ python scripts\08_exp10d_forecast.py         # 월 마감 예측 (07 이후)
 python scripts\09_build_exp10d_dashboard.py  # docs/exp10d.html 생성 (08 이후)
 python scripts\10_fetch_newtemper.py         # 신성질별 국가별 실적 (선택·무거움)
 python scripts\11_fetch_temper.py            # 성질별 실적 (선택·1995~, 64회)
+python scripts\12_fetch_kosis.py             # 생산지수·경기종합지수 (선택·KOSIS)
 python scripts\04_validate.py                # 통합 검증
 python scripts\06_db_status.py               # 문서의 현황 수치 자동 갱신
 python scripts\benchmark_queries.py          # (선택) 쿼리 성능 측정
@@ -157,6 +161,8 @@ python scripts\benchmark_queries.py          # (선택) 쿼리 성능 측정
 
 ## 데이터 출처 및 라이선스 (배포 필수)
 
+**코드와 문서는 [MIT 라이선스](LICENSE)를 따른다. 아래 원자료는 그 대상이 아니다** — 요약은 [`NOTICE.md`](NOTICE.md).
+
 이 DB는 아래 공공데이터를 원천으로 한다. 두 자료(HS부호·HS연계표)는 KOGL 제1유형으로 출처표시가 의무이며, 위반 시 이용허락이 자동 종료된다. 재배포 시 이 절을 반드시 유지한다.
 
 - **무역 실적**: 관세청_품목별 국가별 수출입실적(GW)(공공데이터포털 data.go.kr, 데이터 ID 15100475). OpenAPI 서비스 URL: `http://apis.data.go.kr/1220000/nitemtrade`. 출처: https://www.data.go.kr/data/15100475/openapi.do . 이용허락범위 제한 없음.
@@ -168,6 +174,8 @@ python scripts\benchmark_queries.py          # (선택) 쿼리 성능 측정
 - **관세청 10일 단위 잠정치 네 계열**: 공공데이터포털 15157941(수출 주요국가별)·15157901(수입 주요품목별)·15157909(수입 주요국가별). 15157908과 같은 규칙이며 엔드포인트만 `cntyMmUt…`/`…ImpAcrs`로 갈린다. 넷 다 활용신청이 필요하고 자동승인이다. 수출 10개국은 중국·미국·유럽연합·베트남·홍콩·일본·대만·인도·싱가포르·말레이시아, 수입 10개국은 중국·미국·유럽연합·일본·베트남·호주·대만·사우디아라비아·러시아·말레이시아다.
 - **관세청 성질별 수출입실적**: 공공데이터포털 15102109. `fact_temper`·`dim_temper`의 원천. 엔드포인트는 `Idfytempertrade`이고 필수 변수가 `imexTpcd`, 조회는 1년까지라 연 단위로 나누면 64회로 끝난다. **1995년부터** 있어 이 DB에서 기간이 가장 길다. 국가별이 필요하면 15100476(`ntempertrade`)이 따로 있는데 `cntyCd`가 필수다.
 - **관세청 HSK별 신성질별·성질별 분류**: 공공데이터포털 15049720. dim_nqi·dim_hs10_to_nqi·dim_hs10_to_major10의 원천. 관세청이 정한 공식 대응이라 우리가 추정한 HS10 연계표와 성격이 다르다.
+- **광공업생산지수**: 국가데이터처(KOSIS) 광업제조업동향조사, 통계표 `DT_1F02001`(시도/산업별 광공업생산지수)·`DT_1F02016`(내수/수출 출하지수)·`DT_1F02061`(명절·조업효과 조정). `fact_ip`·`dim_ksic`의 원천. OpenAPI: `https://kosis.kr/openapi/Param/statisticsParameterData.do`. 공공누리 제1유형(출처표시). 출처: 국가데이터처 KOSIS, https://kosis.kr
+- **경기종합지수**: 국가데이터처(KOSIS) 통계표 `DT_1C8015`(경기종합지수 10차)·`DT_1C8016`(구성지표 시계열). `fact_cli`·`dim_cli`의 원천. 지수는 1970년, 구성지표 원계열은 2003년부터다. 공공누리 제1유형(출처표시).
 - **한국천문연구원 특일정보**: dim_workday10d의 원천. 공휴일 달력을 전수 대조해 만들었다.
 - **관세·통계통합품목분류표(HSK) 별표**: 기획재정부(현 재정경제부) 고시 「관세ㆍ통계통합품목분류표」의 별표 전문 및 신구대비표. 출처: 법제처 국가법령정보센터, https://www.law.go.kr/ . dim_hs10_concordance·dim_hs10_to_2022·dim_hs10_name_hist의 원천. 앞의 두 테이블은 고시 원문이 아니라 **원문에서 우리가 추정한 연계**이므로 재배포 시 추정임을 함께 밝힌다. dim_hs10_name_hist는 고시 원문 그대로다.
 
@@ -198,6 +206,10 @@ DB 실물(kcsdb.duckdb)은 GitHub 저장소 100MB 한도를 크게 초과하므�
 - **fact_nqi** (신성질별 국가별 실적): yyyymm, stat_cd, nqi5, exp_dlr, exp_wgt, imp_dlr, imp_wgt. 6,567,873행. **범위가 fact_trade와 다르다 — 이 표만 2005.01부터다.** 관세청 공식 집계라 `dim_hs10_to_nqi` 도출치와 달리 HS 개정 추정이 안 섞인다
 - **fact_temper** (성질별 실적): yyyymm, imexp, temper_cd, dlr, wgt. 123,965행. **이 표만 1995.01부터다.** **수출과 수입은 부호 체계가 서로 다르다**(수출 153·수입 181, 같은 부호 11201이 수출은 기타 육류·수입은 쌀) — 그래서 가로로 눕히지 않고 `imexp`를 키에 둔 세로 형태다
 - **dim_temper**: imexp, temper_cd, name_ko, x1~x4(4단 계층), major10. 334행. `major10`이 10대 품목 꼬리표이고 이것으로 10일 자료를 품목 단위로 검증한다
+- **fact_ip** (광공업생산지수): yyyymm, ksic, measure, value. 279,476행, **1995.01~**. 생산·출하·재고의 원지수와 계절조정, 내수/수출 출하지수, 명절·조업효과 조정 총지수. 산업은 한국표준산업분류 소분류(3자리)까지. 국가데이터처 KOSIS 자료다
+- **dim_ksic**: 생산지수의 산업 코드 사전. 115행. 총지수·대분류·중분류·소분류 4층과 상위 코드
+- **fact_cli** (경기종합지수): yyyymm, tbl, cli_cd, value. 20,939행, **1970.01~ — 이 DB에서 가장 긴 계열**. `tbl`이 `DT_1C8015`(지수·순환변동치)와 `DT_1C8016`(구성지표 원계열, 2003년부터)로 갈린다
+- **dim_cli**: 경기종합지수 지표 코드의 이름. 56행
 - **v_exp10d_seg** (뷰): 최신 관측만 남기고 누적을 구간 증분으로 바꾼다. seg_kusd=증분, cum_kusd=누적. **`series`를 반드시 걸러 쓸 것**(안 그러면 네 계열이 섞인다). 둘을 헷갈리면 cutoff=99가 월 전체가 아니라 하순 증분이 되어 값이 40%로 나온다
 
 HS10 연계는 공식 승계표가 존재하지 않아 우리가 추정한 것이다. HS6 연계(공표된 사실)와 성격이 다르므로 테이블을 분리했다. 쓰는 법과 검증 결과는 docs/DB_구축_원칙.md §3.4 참조.
