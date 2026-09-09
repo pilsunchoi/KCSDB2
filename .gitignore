@@ -36,3 +36,9 @@ analysis/
 # HSK 별표 PDF (56MB, 로컬 전용). 국가법령정보센터에서 다시 받는다.
 # 받는 경로는 docs/DB_구축_원칙.md §3.4 참조. 03c 실행에만 필요하다.
 data/external/HSK_별표/
+
+# HSK 신구대조표와 HS 개정 설명자료 (로컬 전용).
+# 받는 경로는 관세법령정보포털 세계HS > HS협약 개정자료.
+# 거기 없는 판본은 국가법령정보센터의 연도별 별표로 대신한다.
+data/external/HSK_신구대조표/
+data/external/HS개정_설명자료/
