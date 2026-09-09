@@ -63,13 +63,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 개정: (개정 전 별표, 개정 후 별표, 시행 연월, HS6 연계표의 과거 판본)
+#
+# past가 None인 것은 세계관세기구 개정이 아니라 국내 일부개정이라 HS6가 움직이지 않는
+# 구간이다. 이때 허용 후보는 같은 HS6 안으로 저절로 제한된다(licensed 참조).
+# 2007~2010년 표는 관세법령정보포털에서 받았다(scripts/03j). 국가법령정보센터에는
+# 2011년보다 옛 고시가 없어 그전까지는 이 구간을 잇지 못하고 HS6로 흘렸다.
+# 2010년 표는 2009년 표와 코드가 완전히 같다 - 2010년에는 개정이 없었으므로 사슬에서 뺀다.
+# 2011년 개정은 1월 1일 시행이다. 받아 둔 별표의 고시일이 2011-05-20이라 한때 5월로
+# 보았으나, 그 개정으로 생긴 29개 중 27개가 이미 1~3월에 거래돼 1월이 맞다.
 REVISIONS = {
+    "2008": ("2007", "2008", 200801, None),
+    "2009": ("2008", "2009", 200901, None),
+    "2011": ("2009", "2011", 201101, None),
     "2012": ("2011", "2013", 201201, "2007"),
+    "2014": ("2013", "2015", 201401, None),
     "2017": ("2015", "2017", 201701, "2012"),
     "2022": ("2021", "2022", 202201, "2017"),
 }
-# 개정 사이의 소규모 국내 개정 구간. 양쪽에 다 있는 코드만 그대로 넘긴다.
-BRIDGES = [("2013", "2015"), ("2017", "2021")]
+# 개정 사이의 국내 개정 구간 가운데 아직 개정으로 다루지 않는 것. 양쪽에 다 있는 코드만
+# 그대로 넘긴다. 2017→2021 구간에는 2019년 10월과 2021년 1월 개정이 있으나 이 틈이 흘리는
+# 코드가 2개뿐이라 개정으로 세우지 않았다. 2013→2015 구간은 흘리는 134개가 수출의 0.58%를
+# 걸치고 있어 2014년 개정으로 따로 세웠다.
+BRIDGES = [("2017", "2021")]
 # 과거 판본별로 그 체계가 쓰인 거래 기간
 WINDOWS = {"2007": (200701, 201112), "2012": (201201, 201612), "2017": (201701, 202112)}
 
@@ -83,9 +98,25 @@ ITERS = 400     # IPF 반복
 # 1. 별표 PDF 파싱 (scripts/utils/byeolpyo.py 공유)
 # ─────────────────────────────────────────────────────────────────────────────
 
+def byeolpyo_path(year: str) -> Path | None:
+    for ext in ("pdf", "csv"):
+        p = BYEOLPYO_DIR / f"HSK_별표_{year}.{ext}"
+        if p.exists():
+            return p
+    return None
+
+
 def read_byeolpyo(year: str) -> pd.DataFrame:
-    df = byeolpyo.read(BYEOLPYO_DIR / f"HSK_별표_{year}.pdf")
-    logger.info(f"  별표 {year}: HS10 {len(df):,}개")
+    """별표를 읽는다. PDF는 좌표 파싱, CSV는 03j가 포털에서 받아 둔 것이다.
+
+    둘 다 (code, leaf, path, name_en)을 준다. CSV의 path는 호·소호 이름만 담아 PDF판보다
+    얕지만, CSV를 쓰는 구간은 HS6가 움직이지 않아 후보가 같은 HS6 안으로 제한되므로
+    경로가 후보마다 같은 값이 되어 판별에 기여하지 않는다.
+    """
+    p = byeolpyo_path(year)
+    df = byeolpyo.read(p) if p.suffix == ".pdf" else pd.read_csv(p, dtype={"code": str})
+    df = df.dropna(subset=["code"]).fillna({"leaf": "", "path": "", "name_en": ""})
+    logger.info(f"  별표 {year}({p.suffix.lstrip('.')}): HS10 {len(df):,}개")
     return df
 
 
@@ -97,7 +128,9 @@ def _norm(s: str) -> str:
     return "".join(ch for ch in s if ch.isalnum())
 
 
-def hs6_map(con, past_version: str) -> dict[str, set[str]]:
+def hs6_map(con, past_version: str | None) -> dict[str, set[str]]:
+    if past_version is None:
+        return {}          # 국내 일부개정: HS6 불변이므로 같은 HS6 안에서만 움직인다
     df = con.execute(
         "SELECT hs2022, hs_past FROM dim_hs6_concordance WHERE past_version = ? "
         "AND hs2022 IS NOT NULL AND hs_past IS NOT NULL",
@@ -241,19 +274,48 @@ def compose(a: pd.DataFrame, b: pd.DataFrame) -> pd.DataFrame:
 
 
 def chain(parts: dict[str, pd.DataFrame], tables: dict[str, pd.DataFrame]) -> pd.DataFrame:
+    """과거 체계 → 2022 체계. 판본별로 그 체계가 쓰인 기간의 코드를 모두 담는다.
+
+    한 체계가 쓰인 기간 안에도 국내 개정이 끼어 있다. 예를 들어 past_version='2012'는
+    2012~2016년 거래에 쓰이는데 그 사이 2014년 개정이 있어, 2013년 표에만 있는 코드와
+    2015년 표에만 있는 코드가 모두 그 기간에 나타난다. 그래서 사슬을 한 판본에서만
+    시작하면 어느 한쪽이 통째로 빠진다. 코드마다 가장 이른 판본에서 사슬에 태운다.
+    """
     def bridge(y0: str, y1: str) -> pd.DataFrame:
         keep = sorted(set(tables[y0].code) & set(tables[y1].code))
-        logger.info(f"  틈 {y0}→{y1}: {keep and len(keep):,}개 그대로, "
+        logger.info(f"  틈 {y0}→{y1}: {len(keep):,}개 그대로, "
                     f"{len(set(tables[y0].code)) - len(keep):,}개 흘림")
         return pd.DataFrame({"hs_from": keep, "hs_to": keep, "weight": 1.0})
 
+    def first_entry(ver: str, layers: list[tuple[str, pd.DataFrame]]) -> pd.DataFrame:
+        out, taken = [], set()
+        for label, m in layers:
+            sel = m[~m.hs_from.isin(taken)]
+            out.append(sel)
+            taken |= set(sel.hs_from)
+            logger.info(f"  {ver} 체계: {label}년 판본에서 들어온 코드 {sel.hs_from.nunique():,}개")
+        return pd.concat(out, ignore_index=True)
+
     cols = ["hs_from", "hs_to", "weight"]
-    m12, m17, m22 = (parts[k][cols] for k in ("2012", "2017", "2022"))
-    b1, b2 = bridge(*BRIDGES[0]), bridge(*BRIDGES[1])
+    m08, m09, m11, m12, m14, m17, m22 = (
+        parts[k][cols] for k in ("2008", "2009", "2011", "2012", "2014", "2017", "2022"))
+    b2 = bridge(*BRIDGES[0])
+
+    # 각 별표 판본에서 2022년 체계까지 가는 사슬을 뒤에서부터 쌓는다.
+    t21 = m22
+    t17 = compose(b2, m22)
+    t15 = compose(m17, t17)
+    t13 = compose(m14, t15)
+    t11 = compose(m12, t13)
+    t09 = compose(m11, t11)
+    t08 = compose(m09, t09)
+    t07 = compose(m08, t08)
+
     chains = {
-        "2017": m22,
-        "2012": compose(compose(m17, b2), m22),
-        "2007": compose(compose(compose(compose(m12, b1), m17), b2), m22),
+        "2017": first_entry("2017", [("2017", t17), ("2021", t21)]),
+        "2012": first_entry("2012", [("2013", t13), ("2015", t15)]),
+        "2007": first_entry("2007", [("2007", t07), ("2008", t08),
+                                     ("2009", t09), ("2011", t11)]),
     }
     out = []
     for ver, m in chains.items():
@@ -330,7 +392,7 @@ DDL = {
         CREATE TABLE dim_hs10_concordance (
             hs_from   VARCHAR,   -- 개정 전 HS10
             hs_to     VARCHAR,   -- 개정 후 HS10
-            revision  VARCHAR,   -- '2012' | '2017' | '2022'
+            revision  VARCHAR,   -- '2008'|'2009'|'2011'|'2012'|'2017'|'2022'
             weight    DOUBLE,    -- hs_from 별 합이 1
             score     DOUBLE,    -- 품명 유사도(0~1). identity는 1
             relation  VARCHAR    -- 'identity' | 'moved'
@@ -360,9 +422,9 @@ def main() -> None:
     years = sorted({y for r in REVISIONS.values() for y in r[:2]})
     for a, b in BRIDGES:
         years = sorted(set(years) | {a, b})
-    missing = [y for y in years if not (BYEOLPYO_DIR / f"HSK_별표_{y}.pdf").exists()]
+    missing = [y for y in years if byeolpyo_path(y) is None]
     if missing:
-        logger.error(f"별표 PDF 없음: {missing} — {BYEOLPYO_DIR}")
+        logger.error(f"별표 없음(PDF·CSV 둘 다): {missing} — {BYEOLPYO_DIR}")
         sys.exit(1)
 
     logger.info("별표 파싱")

@@ -13,7 +13,8 @@
 기획재정부 고시 별표에는 그해 유효했던 코드 전부의 품명이 있으므로 그중 3,738종
 (89.1%, 폐지코드 거래액의 94.1%)을 되찾을 수 있다.
 
-입력: data/external/HSK_별표/HSK_별표_{2011,2013,2015,2017,2021,2022}.pdf
+입력: data/external/HSK_별표/HSK_별표_<연도>.pdf 또는 .csv
+      2007~2010년은 관세법령정보포털에서 받은 CSV(scripts/03j), 나머지는 고시 별표 PDF다.
 출력: data/processed/kcsdb.duckdb 의 dim_hs10_name_hist
 
 실측 (2026-08-28):
@@ -56,7 +57,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 전문(全文) 별표가 있는 해. 2012·2014년 판은 신구대비표라 전문이 아니므로 제외한다.
-YEARS = ["2011", "2013", "2015", "2017", "2021", "2022"]
+YEARS = ["2007", "2008", "2009", "2010", "2011", "2013", "2015", "2017", "2021", "2022"]
 
 DDL = """
     CREATE TABLE dim_hs10_name_hist (
@@ -76,8 +77,17 @@ def collect() -> pd.DataFrame:
     frames = []
     for y in YEARS:
         pdf = BYEOLPYO_DIR / f"HSK_별표_{y}.pdf"
+        csv = BYEOLPYO_DIR / f"HSK_별표_{y}.csv"
+        if csv.exists() and not pdf.exists():
+            df = pd.read_csv(csv, dtype={"code": str})[["code", "leaf", "name_en"]].copy()
+            df.columns = ["hs10", "name_ko", "name_en"]
+            df["byeolpyo_year"] = y
+            df = df.fillna({"name_ko": "", "name_en": ""})
+            logger.info(f"  별표 {y}(csv): {len(df):,}개")
+            frames.append(df)
+            continue
         if not pdf.exists():
-            logger.error(f"별표 PDF 없음: {pdf}")
+            logger.error(f"별표 없음(PDF·CSV 둘 다): {pdf}")
             sys.exit(1)
         df = byeolpyo.read(pdf)[["code", "leaf", "name_en"]].copy()
         df.columns = ["hs10", "name_ko", "name_en"]
