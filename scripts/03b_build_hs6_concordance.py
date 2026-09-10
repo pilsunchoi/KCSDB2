@@ -150,11 +150,13 @@ def main():
     # 다대다 규모 (past_version별)
     for ver in SOURCES:
         sub = concordance[(concordance.past_version == ver) & (concordance.relation == "mapped")]
-        split = sub.groupby("hs2022").size()
-        merge = sub.groupby("hs_past").size()
+        # 이름은 시간 방향으로 붙인다. 2022 코드 하나에 과거 코드가 여럿 달린 것은
+        # 그 과거 코드들이 하나로 '통합'된 것이고, 그 반대가 '분할'이다.
+        merged = sub.groupby("hs2022").size()
+        split = sub.groupby("hs_past").size()
         logger.info(
-            f"  {ver}: 분할(2022 1→과거 다수)={int((split>1).sum())}, "
-            f"통합(과거 다수→2022 1)={int((merge>1).sum())}"
+            f"  {ver}: 분할(과거 1→2022 다수)={int((split>1).sum())}, "
+            f"통합(과거 다수→2022 1)={int((merged>1).sum())}"
         )
 
     if args.dry_run:
