@@ -1,7 +1,7 @@
 """
 02b_parquet_to_duckdb.py — interim parquet + status JSON → DuckDB (KCSDB2 재설계판)
 
-설계 원칙 (docs/DB_구축_원칙.md):
+설계 원칙 (docs/db-principles.md):
 - fact_trade / fact_total 은 02a가 만든 raw 8컬럼 parquet를 그대로 적재.
 - meta_calls 에서도 파생 컬럼(year, month) 제거. yyyymm 만 보존.
 - 인덱스 강제·"압축으로 충분" 단정 없음. 자연 정렬 상태로 적재하고

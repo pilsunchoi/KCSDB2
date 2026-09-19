@@ -1,7 +1,7 @@
 """
 04_validate.py — 통합 검증 (단일 진입점)
 
-설계 원칙 (docs/DB_구축_원칙.md §5):
+설계 원칙 (docs/db-principles.md §5):
 - v1 의 검증 분열(04_validate + _v6_additions + diagnose_validate*) 을 하나로 통합.
 - 각 검증은 PASS / WARN / FAIL 반환. FAIL 존재 시 종료코드 1 (재현·CI 실패 감지).
 - WARN 은 "설계상 예상된 불완전"(폐지코드 미매칭 등). FAIL 은 무결성 위반.

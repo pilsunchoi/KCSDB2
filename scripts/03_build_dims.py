@@ -1,7 +1,7 @@
 """
 03_build_dims.py — dim_country, dim_hs10 생성
 
-설계 원칙 (docs/DB_구축_원칙.md §3.1, §3.2):
+설계 원칙 (docs/db-principles.md §3.1, §3.2):
 - dim_country: 관세청 stat_cd 를 키로, 외교부 표준명을 참조로 병기. fact 는 raw 유지.
   * name_ko_kcs (관세청 원본) 는 02a 부산물(country_names_*.parquet)에서.
   * 외교부 참조(ISO2/3, 영문명, 한글명, 대륙 3종)는 CSV 조인.

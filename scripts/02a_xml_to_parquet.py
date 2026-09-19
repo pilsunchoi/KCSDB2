@@ -1,7 +1,7 @@
 """
 02a: raw XML → interim parquet 변환 (KCSDB2 재설계판)
 
-설계 원칙 (docs/DB_구축_원칙.md):
+설계 원칙 (docs/db-principles.md):
 - fact 테이블은 관세청 API 응답 필드만 담는다. 파생 컬럼을 만들지 않는다.
 - v1 대비 제거: year, month, hs2, hs4, hs6, stat_kor, stat_kor_item
 - 관세청은 결측을 0으로 채워 보낸다. NULL이 존재하지 않으므로 int 캐스팅은 손실 없음.

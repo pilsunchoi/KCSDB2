@@ -234,7 +234,7 @@ def release_body(s: dict, inv: list[dict]) -> list[str]:
         + (f" ({gzmb:,.0f}MB, 압축 해제 시 {s['db_mb']:,.0f}MB)" if gzmb
            else f" (압축 해제 시 {s['db_mb']:,.0f}MB)")
         + "를 받아 압축을 풀고 `data/processed/kcsdb.duckdb`에 놓는다.",
-        "사용법은 저장소 `docs/학생_사용안내.md`, DB 소개는 "
+        "사용법은 저장소 `docs/student-guide.md`, DB 소개는 "
         "https://pilsunchoi.github.io/KCSDB2/ 참조.",
         "",
         "## 들어 있는 것",
@@ -277,7 +277,7 @@ def release_draft(s: dict, inv: list[dict], tag: str) -> str:
         f"# 릴리스 본문 초안 — {tag}",
         "",
         "> `06_db_status.py`가 DB를 읽어 만든다. Releases에 붙여넣기 전에 다시 돌릴 것.",
-        "> 절차는 `docs/배포자_안내.md`.",
+        "> 절차는 `docs/distributor-guide.md`.",
         "",
         f"## 태그\n\n`{tag}`",
         "",
@@ -468,7 +468,7 @@ def main() -> None:
                 print(f"  자료 범위는 같은데 게시본의 내용이 낡았다. 자산을 올린 것이")
                 print(f"  {when:%Y-%m-%d %H:%M}인데 그 뒤에 DB가 바뀌었다 — 표가 늘었거나")
                 print(f"  마트를 다시 냈다. 받는 사람은 사이트가 설명하는 표를 못 찾는다.")
-            print(f"  새 릴리스를 올릴 것 — 절차는 docs/배포자_안내.md, 본문 초안은")
+            print(f"  새 릴리스를 올릴 것 — 절차는 docs/distributor-guide.md, 본문 초안은")
             print(f"  docs/릴리스_본문.md에 있다.")
             print("!" * 68)
     print()

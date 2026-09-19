@@ -1,6 +1,6 @@
 # 배포자 안내 — DB를 GitHub Releases로 배포하기
 
-이 문서는 **DB를 배포하는 사람(교수/관리자)**용이다. 학생용은 docs/학생_사용안내.md.
+이 문서는 **DB를 배포하는 사람(교수/관리자)**용이다. 학생용은 docs/student-guide.md.
 
 ---
 
@@ -73,7 +73,7 @@ GitHub 릴리스 자산 한도는 파일당 2GB다.
 `data/processed/kcsdb.duckdb`에서 읽으므로, 학생이 Release에서 받은 DB를 그 경로에
 놓으면 된다. 배포자가 URL을 노트북에 넣을 필요는 없다(학생이 수동 배치).
 
-학생 안내는 docs/학생_사용안내.md에 있다. Release 설명에 이 문서를 안내한다.
+학생 안내는 docs/student-guide.md에 있다. Release 설명에 이 문서를 안내한다.
 
 ---
 

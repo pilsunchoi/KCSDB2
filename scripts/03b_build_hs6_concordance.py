@@ -1,7 +1,7 @@
 """
 03b_build_hs6_concordance.py — HS6 개정 연계표 추출 (PDF → dim_hs6_concordance)
 
-설계 원칙 (docs/DB_구축_원칙.md §3.3):
+설계 원칙 (docs/db-principles.md §3.3):
 - HS 개정 간 시계열 연결을 DB 계층에서 한 번 해결한다.
 - 단위: HS6 (관세청 공식 연계표가 HS6까지 공개).
 - 출처: 관세청 FTA 포털 HS 연계표 3종 PDF (HS2022 허브 스타형).

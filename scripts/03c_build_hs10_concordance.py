@@ -1,7 +1,7 @@
 """
 03c_build_hs10_concordance.py — HS10(HSK) 개정 연계표 구축
 
-설계 원칙 (docs/DB_구축_원칙.md §3.4):
+설계 원칙 (docs/db-principles.md §3.4):
 - HS10 시계열 연결을 DB 계층에서 한 번 해결한다. fact는 건드리지 않는다.
 - 공식 HS10 승계표는 존재하지 않는다. 연도별 별표 두 판을 맞대어 추정한다.
 - 추정 절차와 그 한계를 weight·method 열로 드러낸다. 규칙을 감추지 않는다.

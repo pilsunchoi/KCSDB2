@@ -667,7 +667,7 @@ HS2022에서 오는 `direct` 부분만 공식이고 옛 코드는 §3.4의 추�
 ```
 KCSDB2/
 ├── docs/
-│   └── DB_구축_원칙.md          (이 문서)
+│   └── db-principles.md          (이 문서)
 ├── scripts/
 │   ├── 02a_xml_to_parquet.py    (재설계: 파생 컬럼 제거)
 │   ├── 02b_parquet_to_duckdb.py (재사용 + 스키마 조정)
