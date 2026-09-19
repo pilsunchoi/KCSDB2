@@ -20,6 +20,10 @@ CLAUDE.md
 docs/연구문서_작성원칙.md
 scripts/lint_research_md.py
 
+# 경로 이름 짓기 규약. 저장소 전체에 걸치는 작업 규약이고 KCSDB2의 산출물이
+# 아니다. 위와 같은 이유로 로컬 전용으로 둔다(2026-09-19).
+docs/naming-principles.md
+
 # 릴리스에 붙여넣을 문안. 06_db_status.py가 DB를 읽어 만드는 작업 문서이고
 # 산출물이 아니다. 필요하면 언제든 다시 생성된다(2026-08-30).
 docs/릴리스_본문.md
