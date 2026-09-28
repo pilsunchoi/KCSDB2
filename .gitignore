@@ -17,7 +17,7 @@ CLAUDE.md
 
 # 집필 규약의 검사 도구. 내가 문서를 쓰는 데 쓰는 것이지 저장소의 산출물이 아니다.
 # 규약 문서 자체는 2026-09-19에 별도 비공개 저장소로 옮겼다
-# (C:/Work/Projects/conventions). 이 도구는 여기 analysis/ 를 훑고 LEGACY 목록을
+# (C:/Work/Projects/conventions). 이 도구는 여기 research/ 를 훑고 LEGACY 목록을
 # 들고 있어 남겨 둔다.
 scripts/lint_research_md.py
 
@@ -31,8 +31,36 @@ docs/릴리스_본문_붙여넣기.md
 # 공개할 준비가 되면 이 줄을 지우고 index.html 개요 탭 버튼줄에 링크를 되살린다.
 docs/exp10d.html
 
-# 연구용 분석 (로컬 전용, 저장소 제외)
-analysis/
+# 연구 폴더. 작업 파일(캐시·산출물·투고본·계획서·비공개 연구)은 로컬 전용이고,
+# 공개하는 논문 본문·재현 노트북·본문 그림만 아래 목록으로 풀어 준다(2026-09-28).
+# 공개 파일이 새로 생기면 여기에 한 줄 더한다.
+research/**
+!research/**/
+!research/four_margins/paper.md
+!research/four_margins/annual_vs_monthly_4margins.ipynb
+!research/four_margins/img/fm_growth.png
+!research/four_margins/img/fm_months.png
+!research/four_margins/img/fm_semi_uv.png
+!research/export_network/paper.md
+!research/export_network/network_analysis.ipynb
+!research/export_network/img/net_core_share.png
+!research/export_network/img/net_growth.png
+!research/export_network/img/semi_bipartite.png
+!research/export_network/img/semi_destinations.png
+!research/washer_safeguard/paper.md
+!research/washer_safeguard/washer_pilot.ipynb
+!research/washer_safeguard/img/wm_monthly_volume.png
+!research/washer_safeguard/img/wm_uv_divergence.png
+!research/trade_trend/trend-descriptive.md
+!research/trade_trend/trend-descriptive.ipynb
+!research/trade_trend/trend-vs-industrial-production.md
+!research/trade_trend/trend-vs-industrial-production.ipynb
+!research/trade_trend/img/fig1_trend_growth.png
+!research/trade_trend/img/fig2_rolling_corr.png
+!research/trade_trend/img/fig3_level_trend_breaks.png
+!research/trade_trend/img/fig_b1_exports_ip.png
+!research/trade_trend/img/fig_b2_semi_ip.png
+!research/trade_trend/img/fig_b3_rolling_corr.png
 
 # HSK 별표 PDF (56MB, 로컬 전용). 국가법령정보센터에서 다시 받는다.
 # 받는 경로는 docs/DB_구축_원칙.md §3.4 참조. 03c 실행에만 필요하다.

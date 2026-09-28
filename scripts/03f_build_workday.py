@@ -33,7 +33,7 @@
 data/external/KASI_공휴일.csv
   한국천문연구원 특일정보 API로 전수 대조한 공휴일이다. workalendar 등으로 생성한 뒤
   한글날 2007~2012년 오포함 제거, 부처님오신날 2012·2023년 정정, 대체공휴일 24일
-  추가를 거쳤다. 만드는 과정은 `analysis/한국 수출입 달력효과/calendar_effects.ipynb` §0.
+  추가를 거쳤다. 만드는 과정은 `research/한국 수출입 달력효과/calendar_effects.ipynb` §0.
 
   **달력이 2026년 3월에서 끝난다.** 그 뒤 기간은 계산할 수 없으므로, 자동 수집을 돌리기
   전에 KASI API로 달력을 늘려야 한다(키는 `config/api_key.env`의 KASI_SERVICE_KEY).

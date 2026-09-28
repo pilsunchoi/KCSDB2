@@ -7,8 +7,8 @@
 못하는 상태였다. 10일 단위 자료는 조업일수 보정 없이 견줄 수 없으므로(상순 조업일수가
 1~8일로 여덟 배까지 벌어진다) 이 달력이 자동 수집의 선행 조건이다.
 
-지금까지는 `analysis/한국 수출입 달력효과/calendar_effects.ipynb` §0이 이 일을 했는데,
-`analysis/`는 gitignore라 파이프라인이 저장소에 없는 파일에 기대고 있었다. 스크립트로
+지금까지는 `research/한국 수출입 달력효과/calendar_effects.ipynb` §0이 이 일을 했는데,
+`analysis/`(지금의 `research/`)는 gitignore라 파이프라인이 저장소에 없는 파일에 기대고 있었다. 스크립트로
 꺼내 `data/external/`에 두었다.
 
 자료
