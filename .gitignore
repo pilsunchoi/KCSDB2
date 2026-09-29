@@ -51,16 +51,16 @@ research/**
 !research/washer_safeguard/washer_pilot.ipynb
 !research/washer_safeguard/img/wm_monthly_volume.png
 !research/washer_safeguard/img/wm_uv_divergence.png
-!research/trade_trend/trend-descriptive.md
-!research/trade_trend/trend-descriptive.ipynb
-!research/trade_trend/trend-vs-industrial-production.md
-!research/trade_trend/trend-vs-industrial-production.ipynb
-!research/trade_trend/img/fig1_trend_growth.png
-!research/trade_trend/img/fig2_rolling_corr.png
-!research/trade_trend/img/fig3_level_trend_breaks.png
-!research/trade_trend/img/fig_b1_exports_ip.png
-!research/trade_trend/img/fig_b2_semi_ip.png
-!research/trade_trend/img/fig_b3_rolling_corr.png
+!research/trade_trend/descriptive/trend-descriptive.md
+!research/trade_trend/descriptive/trend-descriptive.ipynb
+!research/trade_trend/industrial-production/trend-vs-industrial-production.md
+!research/trade_trend/industrial-production/trend-vs-industrial-production.ipynb
+!research/trade_trend/descriptive/img/fig1_trend_growth.png
+!research/trade_trend/descriptive/img/fig2_rolling_corr.png
+!research/trade_trend/descriptive/img/fig3_level_trend_breaks.png
+!research/trade_trend/industrial-production/img/fig_b1_exports_ip.png
+!research/trade_trend/industrial-production/img/fig_b2_semi_ip.png
+!research/trade_trend/industrial-production/img/fig_b3_rolling_corr.png
 
 # HSK 별표 PDF (56MB, 로컬 전용). 국가법령정보센터에서 다시 받는다.
 # 받는 경로는 docs/DB_구축_원칙.md §3.4 참조. 03c 실행에만 필요하다.
